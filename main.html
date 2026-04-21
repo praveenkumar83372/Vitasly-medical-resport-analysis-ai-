@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitalsy Dashboard | Elite Clinical Partner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,700&family=Barlow+Condensed:ital,wght@0,700;1,700;1,800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <style>
+        body { font-family: 'DM Sans', sans-serif; background-color: #05070A; color: #E2E8F0; overflow: hidden; opacity: 0; transition: opacity 0.5s ease; }
+
+        /* ── BRAND LOGO ── */
+        .logo-text {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-style: italic;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+        .logo-icon {
+            background: #10B981;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 14px -3px rgba(16,185,129,0.5);
+        }
+        .logo-icon-inner {
+            border: 2.5px solid rgba(255,255,255,0.95);
+            border-radius: 4px;
+        }
+
+        /* ── AI AVATAR — brand icon style ── */
+        .ai-avatar {
+            background: #10B981;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 20px -5px rgba(16,185,129,0.4);
+        }
+        .ai-avatar-inner {
+            border: 2px solid rgba(255,255,255,0.9);
+            border-radius: 3px;
+        }
+
+        .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .sidebar-item:hover, .chat-link:hover { background: rgba(16, 185, 129, 0.1); color: #10B981; transition: all 0.3s ease; cursor: pointer; }
+        .chat-container::-webkit-scrollbar { width: 5px; }
+        .chat-container::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 10px; }
+        .emerald-glow { box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.3); }
+        .typing-dot { width: 4px; height: 4px; background: #10B981; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <!-- SIDEBAR -->
+    <aside class="w-72 bg-[#0A0F1C] border-r border-white/5 flex flex-col p-6">
+        <!-- BRAND LOGO -->
+        <a href="index.html" class="flex items-center gap-2.5 mb-10 px-2">
+            <div class="logo-icon w-8 h-8">
+                <div class="logo-icon-inner w-[14px] h-[14px]"></div>
+            </div>
+            <span class="logo-text text-[20px] text-white">VITALS<span class="text-emerald-400">Y.</span></span>
+        </a>
+
+        <div class="mb-8 px-2">
+            <p class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1">Clinical Partner</p>
+            <h3 id="userNameDisplay" class="logo-text text-xl text-emerald-400">HI, USER.</h3>
+        </div>
+
+        <nav class="flex-1 flex flex-col min-h-0">
+            <button onclick="startNewChat()" class="w-full sidebar-item flex items-center gap-3 p-3 text-sm font-bold text-gray-400 rounded-xl mb-6 bg-white/5">
+                <i class="fas fa-plus-circle text-emerald-500"></i> New Chat
+            </button>
+            
+            <div class="pt-2 pb-2 text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] px-3">Recent History</div>
+            <div id="chatHistory" class="flex-1 overflow-y-auto chat-container pr-2 space-y-1">
+                <p class="text-[10px] text-gray-700 px-3 italic text-center">Loading chats...</p>
+            </div>
+
+            <div class="mt-auto pt-6 border-t border-white/5 space-y-2">
+                <button onclick="toggleModal('settingsModal')" class="w-full sidebar-item flex items-center gap-3 p-3 text-sm font-bold text-gray-400 rounded-xl">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+                <button onclick="logout()" class="w-full sidebar-item flex items-center gap-3 p-3 text-sm font-bold text-red-500/70 rounded-xl">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="flex-1 flex flex-col relative">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] bg-emerald-500/5 blur-[120px] -z-10"></div>
+        
+        <header class="p-6 border-b border-white/5 glass flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 border border-emerald-500/30">
+                    <i class="fas fa-user-md text-lg"></i>
+                </div>
+                <div>
+                    <h4 class="logo-text text-lg text-white">Clinical AI Specialist</h4>
+                    <p id="chatStatus" class="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">New Consultation</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="toggleModal('exportModal')" class="bg-white/5 hover:bg-white/10 p-2.5 px-6 rounded-xl border border-white/10 text-[10px] font-black text-gray-400 uppercase tracking-widest transition">
+                    <i class="fas fa-history mr-2 text-emerald-500"></i> Export History
+                </button>
+                <button id="globalExportBtn" onclick="triggerReportGeneration()" class="hidden bg-emerald-500 hover:bg-emerald-400 text-white p-2.5 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg emerald-glow">
+                    <i class="fas fa-file-pdf mr-2"></i> Download Analysis
+                </button>
+            </div>
+        </header>
+
+        <div id="chatWindow" class="flex-1 overflow-y-auto p-8 space-y-8 chat-container"></div>
+
+        <div class="p-8">
+            <div class="max-w-4xl mx-auto bg-[#0A0F1C] border border-white/10 rounded-[2rem] p-2 flex items-center shadow-2xl relative">
+                <input type="file" id="fileInput" class="hidden" onchange="handleFileUpload(event)">
+                <button onclick="document.getElementById('fileInput').click()" class="p-4 text-gray-500 hover:text-emerald-500 transition">
+                    <i class="fas fa-paperclip text-lg"></i>
+                </button>
+                <input type="text" id="userInput" placeholder="Ask Vitalsy anything about your health..." 
+                       class="flex-1 bg-transparent border-none outline-none text-white px-4 text-sm placeholder-gray-600"
+                       onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()" class="bg-emerald-500 hover:bg-emerald-400 p-3 px-8 rounded-[1.5rem] font-black text-white text-xs uppercase tracking-widest transition">
+                    Send Query
+                </button>
+            </div>
+            <p class="text-center text-[9px] text-gray-700 mt-4 uppercase tracking-[0.3em] font-bold">Vitalsy Intelligence Unit | Infinite Clinical Memory</p>
+        </div>
+    </main>
+
+    <!-- EXPORT MODAL -->
+    <div id="exportModal" class="hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="w-full max-w-lg glass p-8 rounded-[2.5rem] border border-emerald-500/20">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="logo-text text-2xl text-white">Export Archive</h2>
+                <button onclick="toggleModal('exportModal')" class="text-gray-500 hover:text-white transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="exportList" class="space-y-3 max-h-[400px] overflow-y-auto pr-2 chat-container"></div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="w-full max-w-2xl glass p-10 rounded-[3rem] border border-emerald-500/20 shadow-2xl">
+            <div class="flex justify-between items-center mb-8 text-left">
+                <div>
+                    <h2 class="logo-text text-3xl text-white">Clinical Settings</h2>
+                    <p class="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Manage Your Secure Medical Profile</p>
+                </div>
+                <button onclick="toggleModal('settingsModal')" class="text-gray-500 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="grid md:grid-cols-2 gap-8 text-left">
+                <div class="space-y-4">
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase border-b border-white/5 pb-2">Profile & Security</p>
+                    <div class="text-xs space-y-1">
+                        <p class="text-gray-500 font-bold uppercase text-[9px]">Chronic Conditions</p>
+                        <input type="text" id="baselineInput" placeholder="e.g. Hypertension" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white text-[10px] outline-none focus:border-emerald-500" style="font-family:'DM Sans',sans-serif">
+                    </div>
+                    <button class="w-full text-left text-[10px] font-bold p-3 rounded-xl bg-red-500/10 text-red-500 transition border border-red-500/20" onclick="alert('Contact support to wipe data.')">Wipe My Medical History</button>
+                </div>
+                <div class="space-y-4">
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase border-b border-white/5 pb-2">Analysis Protocol</p>
+                    <div class="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5 text-[10px]">
+                        <span>High-Precision Biomarker Mode</span>
+                        <input type="checkbox" checked class="accent-emerald-500 scale-125">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyDmKTFt6NJWj1hHwjBYd01iRdUMrYmhmVw", 
+            authDomain: "vitalsy-ai-526dd.firebaseapp.com", 
+            projectId: "vitalsy-ai-526dd", 
+            storageBucket: "vitalsy-ai-526dd.firebasestorage.app", 
+            messagingSenderId: "633271456266", 
+            appId: "1:633271456266:web:bbc783979dbf23e2d845f3", 
+            measurementId: "G-4VZ0GZD332" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db   = firebase.firestore();
+
+        const API = "http://127.0.0.1:8000";
+
+        let currentUID          = "";
+        let userName            = "User";
+        let currentChatId       = "";
+        let conversationHistory = [];
+
+        // ── AUTH ──
+        auth.onAuthStateChanged(async user => {
+            if (user) {
+                currentUID = user.uid;
+                const doc = await db.collection('users').doc(user.uid).get();
+                if (doc.exists) {
+                    userName = doc.data().displayName || user.email.split("@")[0] || "User";
+                }
+                document.getElementById('userNameDisplay').innerText = `HI, ${userName.toUpperCase()}.`;
+                loadSidebarHistory();
+                startNewChat();
+                document.body.style.opacity = "1";
+            } else {
+                window.location.replace("login.html");
+            }
+        });
+
+        // ── SESSION ──
+        function startNewChat() {
+            currentChatId       = "chat_" + Date.now();
+            conversationHistory = [];
+            document.getElementById("chatStatus").innerText = "New Consultation";
+            document.getElementById("chatWindow").innerHTML = `
+                <div class="flex gap-6 max-w-4xl fade-in">
+                    <div class="ai-avatar w-10 h-10">
+                        <div class="ai-avatar-inner w-[13px] h-[13px]"></div>
+                    </div>
+                    <div class="space-y-2">
+                        <h5 class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Vitalsy AI Specialist</h5>
+                        <div class="bg-[#111827] p-5 rounded-2xl rounded-tl-none border border-white/5 text-gray-300 text-sm shadow-xl leading-relaxed">
+                            Welcome. Please upload a clinical report or describe your symptoms for immediate AI analysis.
+                        </div>
+                    </div>
+                </div>`;
+            document.getElementById("globalExportBtn").classList.add("hidden");
+        }
+
+        async function loadSidebarHistory() {
+            const div = document.getElementById("chatHistory");
+            try {
+                const snap = await db.collection("chats").doc(currentUID)
+                    .collection("sessions").orderBy("lastUpdated", "desc").limit(15).get();
+                div.innerHTML = snap.empty
+                    ? '<p class="text-[10px] text-gray-700 px-3 italic text-center py-4">No history yet...</p>'
+                    : "";
+                snap.forEach(doc => {
+                    const session = doc.data();
+                    const btn = document.createElement("button");
+                    btn.className = "chat-link w-full text-left p-3 text-[11px] text-gray-500 hover:text-white truncate border-b border-white/5 transition rounded-lg mb-1";
+                    btn.innerText = "💬 " + (session.title || "Recent Consultation");
+                    btn.onclick   = () => loadFullChatSession(doc.id, session.title);
+                    div.appendChild(btn);
+                });
+            } catch(e) {
+                div.innerHTML = '<p class="text-[10px] text-gray-700 px-3 italic text-center py-4">Could not load history.</p>';
+            }
+        }
+
+        async function loadFullChatSession(sessionId, title) {
+            currentChatId       = sessionId;
+            conversationHistory = [];
+            document.getElementById("chatStatus").innerText = title || "Consultation";
+            const win = document.getElementById("chatWindow");
+            win.innerHTML = "";
+            const snap = await db.collection("chats").doc(currentUID)
+                .collection("sessions").doc(sessionId)
+                .collection("messages").orderBy("timestamp", "asc").get();
+            snap.forEach(mDoc => {
+                const m   = mDoc.data();
+                const isAI = (m.role === "model" || m.role === "assistant" || m.role === "ai");
+                appendMessage(isAI ? "bot" : "user", m.content);
+                conversationHistory.push({ role: isAI ? "assistant" : "user", content: m.content });
+                if (isAI) document.getElementById("globalExportBtn").classList.remove("hidden");
+            });
+        }
+
+        // ── SEND MESSAGE ──
+        async function sendMessage() {
+            const input = document.getElementById("userInput");
+            const text  = input.value.trim();
+            if (!text) return;
+
+            appendMessage("user", text);
+            input.value = "";
+            const thinkingId = showThinking();
+
+            const sessionRef = db.collection("chats").doc(currentUID)
+                .collection("sessions").doc(currentChatId);
+            sessionRef.set({
+                title:       text.substring(0, 30) + (text.length > 30 ? "..." : ""),
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            sessionRef.collection("messages").add({
+                role: "user", content: text,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            try {
+                const res  = await fetch(`${API}/chat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: text, user_id: currentUID, history: conversationHistory })
+                });
+                const data = await res.json();
+                removeThinking(thinkingId);
+
+                if (data.reply) {
+                    appendMessage("bot", data.reply);
+                    if (data.new_history_entry) {
+                        conversationHistory.push(...data.new_history_entry);
+                    } else {
+                        conversationHistory.push(
+                            { role: "user",      content: text       },
+                            { role: "assistant", content: data.reply }
+                        );
+                    }
+                    sessionRef.collection("messages").add({
+                        role: "assistant", content: data.reply,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    document.getElementById("globalExportBtn").classList.remove("hidden");
+                    loadSidebarHistory();
+                }
+            } catch(e) {
+                removeThinking(thinkingId);
+                appendMessage("bot", "Vitalsy logic unit offline. Check brain.py status.");
+            }
+        }
+
+        // ── FILE UPLOAD ──
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            appendMessage("user", `Scanning Clinical Document: ${file.name}`);
+            const thinkingId = showThinking();
+
+            const formData = new FormData();
+            formData.append("file",    file);
+            formData.append("user_id", currentUID);
+            formData.append("history", JSON.stringify(conversationHistory));
+
+            try {
+                const res  = await fetch(`${API}/analyze`, { method: "POST", body: formData });
+                const data = await res.json();
+                removeThinking(thinkingId);
+
+                if (data.analysis) {
+                    appendMessage("bot", data.analysis);
+                    if (data.new_history_entry) {
+                        conversationHistory.push(...data.new_history_entry);
+                    } else {
+                        conversationHistory.push(
+                            { role: "user",      content: `[Uploaded: ${file.name}]` },
+                            { role: "assistant", content: data.analysis              }
+                        );
+                    }
+                    const sessionRef = db.collection("chats").doc(currentUID)
+                        .collection("sessions").doc(currentChatId);
+                    sessionRef.set({ title: "Scan: " + file.name, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                    sessionRef.collection("messages").add({ role: "user",      content: `[Uploaded: ${file.name}]`, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+                    sessionRef.collection("messages").add({ role: "assistant", content: data.analysis,              timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+                    document.getElementById("globalExportBtn").classList.remove("hidden");
+                    loadSidebarHistory();
+                }
+            } catch(e) {
+                removeThinking(thinkingId);
+                appendMessage("bot", "Clinical document scan failed. Please try again.");
+            }
+            event.target.value = "";
+        }
+
+        // ── PDF DOWNLOAD ──
+        async function triggerReportGeneration() {
+            if (conversationHistory.length === 0) {
+                alert("No conversation to export yet. Have a consultation first.");
+                return;
+            }
+            const btn = document.getElementById("globalExportBtn");
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generating...';
+            btn.disabled  = true;
+
+            try {
+                const res = await fetch(`${API}/download-pdf`, {
+                    method:  "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body:    JSON.stringify({
+                        patient_name: userName,
+                        conversation: conversationHistory
+                    })
+                });
+                if (!res.ok) throw new Error("Server error " + res.status);
+
+                const blob = await res.blob();
+                const url  = window.URL.createObjectURL(blob);
+                const a    = document.createElement("a");
+                a.style.display = "none";
+                a.href     = url;
+                a.download = `Vitalsy_Report_${userName}_${Date.now()}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                db.collection("exports").doc(currentUID).collection("files").add({
+                    name: `Report — ${new Date().toLocaleDateString()}`,
+                    date: new Date().toLocaleDateString(),
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch(e) {
+                alert("PDF engine offline. Check brain.py is running.\n" + e.message);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-file-pdf mr-2"></i> Download Analysis';
+                btn.disabled  = false;
+            }
+        }
+
+        // ── UI HELPERS ──
+        function appendMessage(sender, text) {
+            const win  = document.getElementById("chatWindow");
+            const safe = text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\n/g, "<br>");
+
+            // AI avatar uses brand logo icon
+            const aiAvatar = `<div class="ai-avatar w-10 h-10 shrink-0"><div class="ai-avatar-inner w-[13px] h-[13px]"></div></div>`;
+            const userAvatar = `<div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center shrink-0"><i class="fas fa-user text-gray-500 text-sm"></i></div>`;
+
+            const html = `
+                <div class="flex ${sender === 'user' ? 'flex-row-reverse ml-auto' : 'gap-6'} max-w-4xl fade-in">
+                    ${sender === 'user' ? userAvatar : aiAvatar}
+                    <div class="${sender === 'user'
+                        ? 'bg-emerald-500/10 border-emerald-500/20 ml-3'
+                        : 'bg-[#111827] border-white/5 mr-3'} p-5 rounded-2xl border text-gray-300 text-sm shadow-xl leading-relaxed">
+                        ${safe}
+                    </div>
+                </div>`;
+            win.insertAdjacentHTML("beforeend", html);
+            win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
+        }
+
+        function showThinking() {
+            const id   = "think-" + Date.now();
+            const html = `
+                <div id="${id}" class="flex gap-6 fade-in">
+                    <div class="ai-avatar w-10 h-10 shrink-0">
+                        <div class="ai-avatar-inner w-[13px] h-[13px]"></div>
+                    </div>
+                    <div class="flex items-center gap-1.5 px-5 py-4 bg-[#111827] rounded-full border border-white/5">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>`;
+            document.getElementById("chatWindow").insertAdjacentHTML("beforeend", html);
+            document.getElementById("chatWindow").scrollTo({ top: document.getElementById("chatWindow").scrollHeight, behavior: 'smooth' });
+            return id;
+        }
+
+        function removeThinking(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        async function updateExportList() {
+            const list = document.getElementById("exportList");
+            list.innerHTML = '<p class="text-gray-500 italic text-sm text-center py-4">Loading...</p>';
+            try {
+                const snap = await db.collection("exports").doc(currentUID)
+                    .collection("files").orderBy("timestamp", "desc").get();
+                list.innerHTML = snap.empty
+                    ? '<p class="text-gray-500 italic text-sm text-center py-10">No recent downloads found.</p>'
+                    : "";
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    list.innerHTML += `
+                        <div class="p-4 bg-white/5 rounded-2xl flex justify-between items-center border border-white/5 mb-2">
+                            <span class="text-xs font-bold text-gray-300">📄 ${d.name || "Report"}</span>
+                            <span class="text-[9px] text-emerald-500/50 uppercase font-black tracking-widest">${d.date || ""}</span>
+                        </div>`;
+                });
+            } catch(e) {
+                list.innerHTML = '<p class="text-red-500/50 italic text-sm text-center py-4">Could not load export history.</p>';
+            }
+        }
+
+        function toggleModal(id) {
+            const m = document.getElementById(id);
+            m.classList.toggle("hidden");
+            if (id === "exportModal" && !m.classList.contains("hidden")) updateExportList();
+        }
+
+        function logout() {
+            auth.signOut().then(() => window.location.replace("login.html"));
+        }
+    </script>
+</body>
+</html>

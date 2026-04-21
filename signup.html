@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Vitalsy | Start Your AI Health Journey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #05070A; color: #E2E8F0; display: flex; align-items: center; justify-content: center; min-height: 100vh; overflow-x: hidden; }
+        .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .emerald-gradient { background: linear-gradient(135deg, #10B981 0%, #059669 100%); }
+        .emerald-glow { box-shadow: 0 0 50px -10px rgba(16, 185, 129, 0.2); }
+        .form-container { max-height: 90vh; overflow-y: auto; scrollbar-width: none; }
+        .form-container::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="flex items-center justify-center p-6">
+
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-emerald-500/5 blur-[120px] -z-10"></div>
+
+    <div class="w-full max-w-lg glass p-8 md:p-10 rounded-[2.5rem] border border-emerald-500/20 emerald-glow text-center form-container">
+        <div class="flex items-center justify-center gap-2 mb-6">
+            <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                <i class="fas fa-microscope text-white text-xs"></i>
+            </div>
+            <span class="text-2xl font-black tracking-tighter text-white uppercase italic">Vitals<span class="text-emerald-500">y.</span></span>
+        </div>
+
+        <h2 class="text-2xl font-extrabold text-white mb-2 italic uppercase tracking-tight">Create Clinical Profile</h2>
+        <p class="text-gray-500 text-xs mb-8 uppercase tracking-widest font-bold">Unlock Personalized AI Consultation</p>
+
+        <form id="signupForm" class="space-y-4 text-left">
+            <div>
+                <label class="text-[10px] font-bold text-gray-500 uppercase ml-2 tracking-widest">Full Name</label>
+                <input type="text" id="name" class="w-full bg-[#0A0F1C] border border-gray-800 p-3.5 rounded-2xl focus:border-emerald-500 outline-none transition text-white" required>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-gray-500 uppercase ml-2 tracking-widest">Clinical Email</label>
+                <input type="email" id="email" class="w-full bg-[#0A0F1C] border border-gray-800 p-3.5 rounded-2xl focus:border-emerald-500 outline-none transition text-white" required>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-2 tracking-widest">Age</label>
+                    <input type="number" id="age" class="w-full bg-[#0A0F1C] border border-gray-800 p-3.5 rounded-2xl focus:border-emerald-500 outline-none transition text-white" required>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-2 tracking-widest">Sex</label>
+                    <select id="sex" class="w-full bg-[#0A0F1C] border border-gray-800 p-3.5 rounded-2xl focus:border-emerald-500 outline-none transition text-gray-400" required>
+                        <option value="" disabled selected>Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-gray-500 uppercase ml-2 tracking-widest">Location</label>
+                <input type="text" id="location" placeholder="City, Country" class="w-full bg-[#0A0F1C] border border-gray-800 p-3.5 rounded-2xl focus:border-emerald-500 outline-none transition text-white" required>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-gray-500 uppercase ml-2 tracking-widest">Clinical Password</label>
+                <input type="password" id="password" class="w-full bg-[#0A0F1C] border border-gray-800 p-3.5 rounded-2xl focus:border-emerald-500 outline-none transition text-white" required>
+            </div>
+
+            <button id="signupBtn" type="submit" class="w-full emerald-gradient py-4 rounded-2xl font-black text-white shadow-lg hover:brightness-110 transition mt-4 uppercase tracking-widest">
+                Generate Profile
+            </button>
+        </form>
+
+        <p class="mt-8 text-sm text-gray-500 italic">
+            Existing User? <a href="login.html" class="text-emerald-500 font-bold hover:underline">Sign In</a>
+        </p>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDmKTFt6NJWj1hHwjBYd01iRdUMrYmhmVw",
+            authDomain: "vitalsy-ai-526dd.firebaseapp.com",
+            projectId: "vitalsy-ai-526dd",
+            storageBucket: "vitalsy-ai-526dd.firebasestorage.app",
+            messagingSenderId: "633271456266",
+            appId: "1:633271456266:web:bbc783979dbf23e2d845f3",
+            measurementId: "G-4VZ0GZD332"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        const form = document.getElementById('signupForm');
+        const btn = document.getElementById('signupBtn');
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const age = parseInt(document.getElementById('age').value);
+            const sex = document.getElementById('sex').value;
+            const loc = document.getElementById('location').value;
+            const password = document.getElementById('password').value;
+
+            btn.disabled = true;
+            btn.innerText = "Creating...";
+
+            try {
+                const cred = await auth.createUserWithEmailAndPassword(email, password);
+                
+                await db.collection('users').doc(cred.user.uid).set({
+                    displayName: name,
+                    email: email,
+                    age: age,
+                    gender: sex,
+                    location: loc,
+                    joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    plan: "Pro"
+                });
+
+                alert("Clinical Profile Activated. Welcome to Vitalsy Pro.");
+                window.location.href = "main.html";
+
+            } catch (err) {
+                console.error(err);
+
+                if (err.code === "auth/email-already-in-use") {
+                    alert("Account already exists. Please login.");
+                } else if (err.code === "auth/weak-password") {
+                    alert("Password must be at least 6 characters.");
+                } else {
+                    alert(err.message);
+                }
+            }
+
+            btn.disabled = false;
+            btn.innerText = "Generate Profile";
+        };
+    </script>
+</body>
+</html>

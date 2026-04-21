@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+google-genai
+firebase-admin
+python-docx
+fpdf2
+pdfplumber
+python-multipart
+python-dotenv
