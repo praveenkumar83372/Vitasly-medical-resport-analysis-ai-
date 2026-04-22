@@ -1,5 +1,21 @@
-__pycache__/
+# Environment — NEVER push these
 .env
 serviceAccountKey.json
-*.jpg
-*.png
+*.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
