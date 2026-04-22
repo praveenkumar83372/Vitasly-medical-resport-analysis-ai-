@@ -7,7 +7,8 @@
               python-docx fpdf2 pdfplumber openpyxl
               python-multipart python-dotenv
 
-  RUN:  python brain.py
+  RUN locally:  python brain.py
+  RUN on Render: uvicorn brain:app --host 0.0.0.0 --port 10000
 ==========================================================
 """
 
@@ -15,9 +16,9 @@ import io, os, re, json, traceback, csv, base64
 import pdfplumber
 from groq import Groq
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from datetime import datetime, timezone
 from fpdf import FPDF
@@ -31,14 +32,13 @@ FIREBASE_CRED = os.getenv("FIREBASE_CRED", "serviceAccountKey.json")
 if not GROQ_API_KEY:
     raise RuntimeError(
         "\n\n❌  GROQ_API_KEY not found!\n"
-        "    Create a .env file in your project folder with:\n"
-        "    GROQ_API_KEY=your_key_here\n"
-        "    Get a free key at: https://console.groq.com\n"
+        "    Add it as an Environment Variable on Render.\n"
+        "    Or create a .env file locally with: GROQ_API_KEY=your_key\n"
     )
 
-groq_client = Groq(api_key=GROQ_API_KEY)
+groq_client       = Groq(api_key=GROQ_API_KEY)
 GROQ_MODEL        = "llama-3.3-70b-versatile"
-GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"  # reads images
+GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 SYSTEM_PROMPT = """
 You are Vitalsy Elite AI — a sharp, warm, and experienced medical specialist built by the Vitalsy team.
@@ -61,17 +61,13 @@ You are Vitalsy Elite AI — a sharp, warm, and experienced medical specialist b
 
 === GREETING ===
 When user says hi/hello/hey:
-- Greet them in ONE warm sentence. 
+- Greet them in ONE warm sentence.
 - Then in 2-3 short lines (not a list), mention what they can do: upload a report, describe symptoms, or ask questions.
 - Total response: max 5 lines. No more.
 
 Example of GOOD greeting:
 "Hey! Good to have you here. I am Vitalsy AI — your blood report specialist.
 You can upload a blood report and I will break it down for you, or just describe what you are feeling and we can go from there."
-
-Example of BAD greeting (too long, too paragraph-heavy):
-"It's lovely to meet you. I'm here to help you understand your blood test results in a way that's easy to grasp. If you have a blood report you'd like me to look at, feel free to share it with me and I'll do my best to break it down for you. Alternatively, if you're experiencing some symptoms..."
-— This is what you must NEVER do.
 
 === WHEN ASKED WHAT YOU CAN DO ===
 Give a short, punchy list. Not paragraphs.
@@ -98,51 +94,59 @@ Test Name
   What it means: (1 plain English sentence)
   Tip: (1 practical action if abnormal — skip if normal)
 
-After all parameters, add two short sections:
-  Summary — 3-4 lines. What is the overall picture?
-  What to do next — 3-5 bullet points. Practical lifestyle/diet actions.
+After all parameters, add these FOUR sections — all mandatory:
+
+  OVERALL SUMMARY
+  3-4 plain sentences about the person overall health picture. Reassure if mostly normal.
+
+  WHAT TO DO NEXT
+  3-5 practical bullet points based on the results.
+
+  FOOD & NUTRITION RECOMMENDATIONS
+  - Foods to eat more of (with reason based on their values)
+  - Foods to reduce or avoid (with reason)
+  - A simple daily meal idea (breakfast, lunch, dinner)
+
+  LIFESTYLE TIPS
+  3-4 specific habits based on their results (sleep, exercise, hydration, stress)
 
 End with: "Please see a doctor before making any medical decisions based on this."
-
-If report is unclear or incomplete — ask for the missing details before analysing.
 
 === CLARIFICATION ===
 If user describes symptoms without a report:
 - First acknowledge what they said in 1 sentence.
-- Then ask: age, gender, how long, any known conditions — but ask naturally, not as a form.
+- Then ask: age, gender, how long, any known conditions — naturally, not as a form.
 
 === SCOPE — BLOOD REPORTS ONLY ===
 If user uploads or asks about non-blood reports (MRI, X-ray, urine, ECG, prescription, dental etc.):
-Reply exactly: "I am sorry, right now I can only analyse blood test reports. We are working hard to add more very soon — stay tuned! Sorry for the inconvenience and have a great day."
-Do not attempt to analyse anything else.
+Reply: "I am sorry, right now I can only analyse blood test reports. We are working hard to add more very soon — stay tuned! Sorry for the inconvenience and have a great day."
 
 === FOOD & NUTRITION FOLLOW-UP ===
-If a user asks about food, diet, nutrition, or what to eat — after you have already analysed their blood report in this conversation:
-- Do NOT ask them questions. You already have their report data.
-- Immediately give specific food recommendations based on their blood values from earlier in the conversation.
-- Format: Foods to eat more, Foods to reduce, a simple daily meal idea.
-- Be specific — name actual foods, not just "eat healthy".
+If user asks about food after a blood report was already analysed in this conversation:
+- Do NOT ask questions. You already have their data.
+- Immediately give specific foods to eat more, foods to reduce, and a simple daily meal idea.
+- Name actual foods, not just "eat healthy".
 
-If a user asks about food with NO prior blood report in the conversation:
-- Give general healthy eating advice in a short, friendly way.
-- Mention that if they share their blood report, you can give personalised recommendations.
-- Keep it to 5-6 lines max. Do not ask multiple clarifying questions.
+If no blood report in conversation yet:
+- Give short general healthy eating advice (5-6 lines max).
+- Mention they can share their report for personalised advice.
 
 === RULES ===
 - Never diagnose. Use: this may suggest, this could indicate, this is often seen in.
 - If unsure — say so honestly and suggest seeing a doctor.
 - Never be dismissive or cold.
-- Keep follow-up answers connected to the conversation context — especially blood report data already shared.
+- Keep follow-up answers connected to the conversation context.
 - Every reply should feel like it was written by a real person, not copy-pasted from a template.
 """
 
+# ─────────────────────────────────────────────
+# FIREBASE  (optional — silent fail)
+# ─────────────────────────────────────────────
 db = None
 try:
     import firebase_admin
     from firebase_admin import credentials, firestore
     if not firebase_admin._apps:
-        # Render stores secret files in /etc/secrets/
-        # Fallback to local path for development
         RENDER_CRED = "/etc/secrets/serviceAccountKey.json"
         cred_path   = RENDER_CRED if os.path.exists(RENDER_CRED) else FIREBASE_CRED
         if os.path.exists(cred_path):
@@ -166,13 +170,27 @@ def save_chat(user_id, user_msg, ai_msg):
     except Exception as e:
         print("Firebase write error:", e)
 
+# ─────────────────────────────────────────────
+# FASTAPI — CORS fully open for all origins
+# ─────────────────────────────────────────────
 app = FastAPI(title="Vitalsy Elite AI", version="4.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,   # must be False when allow_origins=["*"]
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
+)
+
+# ─────────────────────────────────────────────
+# MODELS
+# ─────────────────────────────────────────────
 class ChatRequest(BaseModel):
     message:  str
     user_id:  str  = "guest"
-    history:  list = []   # full conversation: [{role, content | parts}]
+    history:  list = []
 
 class AnalyzeRequest(BaseModel):
     text:    str
@@ -185,18 +203,13 @@ class PDFRequest(BaseModel):
 SUPPORTED_EXTS = {".pdf",".docx",".doc",".txt",".csv",".xlsx",".xls",".rtf",".xml",".json",".png",".jpg",".jpeg"}
 BLOCKED_EXTS   = {".mp3",".mp4",".wav",".avi",".mov",".mkv",".aac",".flac",".ogg",".wma",".wmv",".webm",".m4a",".m4v"}
 
+# ─────────────────────────────────────────────
+# AI HELPERS
+# ─────────────────────────────────────────────
 def normalise_history(history: list) -> list:
-    """
-    Accept history in any format the frontend sends and convert to clean Groq messages.
-    Supports:
-      {"role": "user",      "parts": ["text"]}   <- our own format
-      {"role": "assistant", "content": "text"}   <- standard openai format
-      {"role": "model",     "parts": ["text"]}   <- gemini-style
-    """
     messages = []
     for turn in history:
         role = turn.get("role", "user")
-        # Resolve content — try "content" first, then "parts"
         if "content" in turn and turn["content"]:
             text = turn["content"]
         elif "parts" in turn:
@@ -209,7 +222,6 @@ def normalise_history(history: list) -> list:
         groq_role = "assistant" if role in ("model", "assistant") else "user"
         messages.append({"role": groq_role, "content": str(text).strip()})
     return messages
-
 
 def call_groq(message: str, history: list, max_tokens: int = 2000) -> str:
     try:
@@ -224,6 +236,9 @@ def call_groq(message: str, history: list, max_tokens: int = 2000) -> str:
         traceback.print_exc()
         return "I am having a little trouble connecting right now. Please try again in a moment."
 
+# ─────────────────────────────────────────────
+# FILE EXTRACTION
+# ─────────────────────────────────────────────
 def extract_text(file_bytes: bytes, filename: str) -> str:
     fname = filename.lower()
     if fname.endswith(".pdf"):
@@ -260,80 +275,70 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
     return file_bytes.decode("utf-8", errors="ignore")
 
 def analyse_image_with_groq(image_bytes: bytes, filename: str) -> str:
-    """Send image directly to Groq vision model and get blood report analysis."""
-    ext = os.path.splitext(filename)[1].lower().lstrip(".")
-    mime_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"}
+    ext       = os.path.splitext(filename)[1].lower().lstrip(".")
+    mime_map  = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"}
     mime_type = mime_map.get(ext, "image/jpeg")
-    b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+    b64       = base64.standard_b64encode(image_bytes).decode("utf-8")
 
-    # Dedicated vision prompt — no system prompt interference, very direct instruction
     vision_instruction = """You are a medical blood report reading specialist.
 
 TASK: Read every single value visible in this blood report image and perform a full analysis.
 
 RULES:
-- Extract ALL test names and their values from the image — even if slightly blurry, do your best to read them.
-- Do NOT say the image is unclear or ask for a better version. Just read what you can see and work with it.
-- If a specific value is truly unreadable, note it briefly then continue with the rest.
-- Present the full analysis in this format for each parameter:
+- Extract ALL test names and values — even if slightly blurry, do your best.
+- Do NOT say the image is unclear. Just read what you can see and work with it.
+- If a value is truly unreadable, note it briefly and continue.
+- For each parameter use this format:
 
   Test Name
   Value: X  |  Normal Range: Y  |  Status: High / Low / Normal
   Meaning: (1 plain English sentence)
-  Tip: (1 practical action if abnormal — skip if normal)
+  Tip: (1 practical tip if abnormal — skip if normal)
 
-- After all parameters, write these FOUR sections — all are mandatory, do not skip any:
+- After all parameters, write these FOUR sections (all mandatory):
 
   OVERALL SUMMARY
-  3-4 plain sentences about the person's overall health picture. Reassure if mostly normal.
+  3-4 plain sentences. Reassure if mostly normal.
 
   WHAT TO DO NEXT
-  3-5 practical bullet points based on the results.
+  3-5 practical bullet points.
 
   FOOD & NUTRITION RECOMMENDATIONS
-  Give specific food recommendations tailored to this person's blood report results.
-  - List foods they SHOULD eat more of, with a reason for each (based on their specific values)
-  - List foods they should REDUCE or avoid, with a reason
-  - Give a simple daily meal suggestion (breakfast, lunch, dinner idea)
-  - Make it practical and easy to follow for someone with no nutrition background
+  - Foods to eat more of (with reason based on the specific values)
+  - Foods to reduce or avoid (with reason)
+  - A simple daily meal idea (breakfast, lunch, dinner)
 
   LIFESTYLE TIPS
-  3-4 specific lifestyle habits based on their results (sleep, exercise, hydration, stress etc.)
+  3-4 specific lifestyle habits based on the results.
 
 - End with: Please consult a qualified doctor before making any medical decisions.
 
-START the analysis immediately. Do not say you cannot read the image."""
+START immediately. Do not say you cannot read the image."""
 
     try:
         resp = groq_client.chat.completions.create(
             model=GROQ_VISION_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:{mime_type};base64,{b64}"}
-                        },
-                        {
-                            "type": "text",
-                            "text": vision_instruction
-                        }
-                    ]
-                }
-            ],
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64}"}},
+                    {"type": "text",      "text": vision_instruction}
+                ]
+            }],
             max_tokens=2500,
             temperature=0.5,
         )
         return resp.choices[0].message.content.strip()
     except Exception as e:
         traceback.print_exc()
-        return f"I had trouble processing your image right now. Please try again, or type your blood values directly in the chat and I will analyse them fully."
+        return "I had trouble processing your image. Please try again, or type your blood values directly in the chat."
 
-
+# ─────────────────────────────────────────────
+# PDF BUILDER
+# ─────────────────────────────────────────────
 def clean_for_pdf(text: str) -> str:
     replacements = {
-        "\u2b24": "", "\U0001f534": "[HIGH]", "\U0001f7e1": "[LOW]", "\U0001f7e2": "[NORMAL]",
+        "\U0001f534": "[HIGH]", "\U0001f7e1": "[LOW]", "\U0001f7e2": "[NORMAL]",
         "\u2705": "", "\u26a0\ufe0f": "[!]", "\u274c": "[X]",
         "\U0001f600": "", "\U0001f601": "", "\U0001f602": "", "\U0001f603": "",
     }
@@ -357,8 +362,7 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
         f"3. Key Concerns (if any)\n4. Nutrition and Lifestyle Recommendations\n5. Doctor Note\n\n"
         f"Patient name: {patient_name}\n"
         f"Consultation content:\n{report_body[:4000]}\n\n"
-        f"Write as a professional medical document. No markdown. Plain text with clear section headings only. "
-        f"For each parameter write Normal Range and Patient Value on separate lines."
+        f"Write as a professional medical document. No markdown. Plain text with clear section headings only."
     )
     structured = clean_for_pdf(call_groq(summary_prompt, [], max_tokens=2000))
 
@@ -374,7 +378,7 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
     pdf.set_auto_page_break(auto=True, margin=32)
     pdf.add_page()
 
-    # Header band
+    # Header
     pdf.set_fill_color(*DARK_BLUE)
     pdf.rect(0, 0, 210, 40, 'F')
     pdf.set_xy(10, 8)
@@ -393,7 +397,7 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
     pdf.set_xy(140, 23)
     pdf.cell(60, 5, f"Time: {now.strftime('%I:%M %p')}", align="R", ln=True)
 
-    # Patient info bar
+    # Patient bar
     pdf.set_fill_color(*LIGHT_BLUE)
     pdf.rect(0, 40, 210, 16, 'F')
     pdf.set_text_color(*DARK_BLUE)
@@ -406,20 +410,18 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
     pdf.cell(90, 6, "Powered by Vitalsy Elite AI  |  vitalsy.ai", align="R", ln=True)
     pdf.ln(6)
 
-    # Divider
     pdf.set_draw_color(*MID_BLUE)
     pdf.set_line_width(0.6)
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
     pdf.ln(5)
 
-    # Report body
     SECTION_KW = ["summary","analysis","parameter","concern","nutrition","lifestyle","recommendation","note","doctor"]
     for line in structured.split("\n"):
         line = line.strip()
         if not line:
             pdf.ln(2)
             continue
-        ll = line.lower()
+        ll         = line.lower()
         is_section = any(kw in ll for kw in SECTION_KW) and len(line) < 80
         is_status  = any(t in line for t in ("[HIGH]","[LOW]","[NORMAL]"))
 
@@ -432,9 +434,9 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
             pdf.ln(1)
             pdf.set_text_color(*DARK_GRAY)
         elif is_status:
-            if "[HIGH]" in line:   pdf.set_fill_color(255, 230, 230)
-            elif "[LOW]" in line:  pdf.set_fill_color(255, 250, 215)
-            else:                  pdf.set_fill_color(225, 255, 225)
+            if "[HIGH]" in line:  pdf.set_fill_color(255, 230, 230)
+            elif "[LOW]" in line: pdf.set_fill_color(255, 250, 215)
+            else:                 pdf.set_fill_color(225, 255, 225)
             pdf.set_font("Arial", "B", 9)
             pdf.set_text_color(*DARK_GRAY)
             pdf.multi_cell(0, 6, line, fill=True)
@@ -448,7 +450,7 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
             pdf.set_text_color(*DARK_GRAY)
             pdf.multi_cell(0, 5.5, line)
 
-    # Consultation transcript
+    # Transcript
     pdf.ln(5)
     pdf.set_fill_color(*MID_BLUE)
     pdf.set_text_color(*WHITE)
@@ -493,7 +495,9 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
 
     return pdf.output()
 
-
+# ─────────────────────────────────────────────
+# ROUTES
+# ─────────────────────────────────────────────
 @app.get("/")
 def root():
     return {"status": "Vitalsy Elite AI is running", "version": "4.0"}
@@ -502,13 +506,17 @@ def root():
 def health():
     return {"ok": True}
 
+@app.options("/{rest_of_path:path}")
+async def preflight(rest_of_path: str):
+    """Handle CORS preflight for all routes."""
+    return JSONResponse(content={}, status_code=200)
+
 @app.post("/chat")
 async def chat(request: ChatRequest):
     reply = call_groq(request.message, request.history)
     save_chat(request.user_id, request.message, reply)
     return {
         "reply": reply,
-        # Frontend appends these two entries to its history array before next call
         "new_history_entry": [
             {"role": "user",      "content": request.message},
             {"role": "assistant", "content": reply},
@@ -519,12 +527,10 @@ async def chat(request: ChatRequest):
 async def analyze(
     file:    UploadFile = File(...),
     user_id: str        = Form("guest"),
-    history: str        = Form("[]"),  # JSON array of full conversation so far
+    history: str        = Form("[]"),
 ):
     filename = file.filename or "upload"
-    ext = os.path.splitext(filename)[1].lower()
-
-    # Parse prior conversation history from frontend
+    ext      = os.path.splitext(filename)[1].lower()
     try:
         prior_history = json.loads(history)
     except Exception:
@@ -532,9 +538,8 @@ async def analyze(
 
     if ext in BLOCKED_EXTS:
         return {"analysis": "I am sorry, I cannot process audio or video files. Please upload your blood report as a PDF, Word document, Excel sheet, or image.", "filename": filename}
-
     if ext and ext not in SUPPORTED_EXTS:
-        return {"analysis": f"I am not able to read .{ext.lstrip('.')} files right now. Please upload as PDF, DOCX, XLSX, CSV, TXT, or an image (JPG/PNG).", "filename": filename}
+        return {"analysis": f"I am not able to read .{ext.lstrip('.')} files right now. Please upload as PDF, DOCX, XLSX, CSV, TXT, or an image.", "filename": filename}
 
     try:
         file_bytes = await file.read()
@@ -544,8 +549,7 @@ async def analyze(
             analysis = analyse_image_with_groq(file_bytes, filename)
             save_chat(user_id, f"[Uploaded image: {filename}]", analysis)
             return {
-                "analysis": analysis,
-                "filename": filename,
+                "analysis": analysis, "filename": filename,
                 "new_history_entry": [
                     {"role": "user",      "content": f"[Uploaded blood report image: {filename}]"},
                     {"role": "assistant", "content": analysis},
@@ -553,33 +557,24 @@ async def analyze(
             }
 
         if not text.strip():
-            reply = call_groq(
-                "The user uploaded a file but no text could be extracted. "
-                "Apologise kindly and ask them to try a PDF or DOCX version or type the values in the chat.",
-                prior_history
-            )
+            reply = call_groq("The user uploaded a file but no text could be extracted. Apologise kindly and ask them to try a PDF or DOCX or type the values in chat.", prior_history)
             return {"analysis": reply, "filename": filename}
 
         prompt = (
-            f"The user has uploaded a blood test report named '{filename}'. Extracted content:\n\n"
-            f"{text[:5000]}\n\n"
-            f"Analyse this fully as a blood report specialist following your complete analysis format. "
-            f"You MUST include all four sections: parameter analysis, overall summary, what to do next, "
-            f"food and nutrition recommendations (with specific foods to eat and avoid based on the results), "
-            f"and lifestyle tips. If this is NOT a blood report (MRI, prescription etc.), "
-            f"tell the user kindly you only handle blood reports right now."
+            f"The user uploaded a blood test report named '{filename}':\n\n{text[:5000]}\n\n"
+            f"Analyse fully as a blood report specialist. Include all four sections: "
+            f"parameter analysis, overall summary, what to do next, food & nutrition recommendations, lifestyle tips. "
+            f"If NOT a blood report, tell the user kindly."
         )
         analysis = call_groq(prompt, prior_history)
         save_chat(user_id, f"[Uploaded: {filename}]", analysis)
         return {
-            "analysis": analysis,
-            "filename": filename,
+            "analysis": analysis, "filename": filename,
             "new_history_entry": [
                 {"role": "user",      "content": f"[Uploaded blood report: {filename}]\n\n{text[:3000]}"},
                 {"role": "assistant", "content": analysis},
             ]
         }
-
     except Exception as e:
         traceback.print_exc()
         return {"analysis": f"Something went wrong reading your file. Please try again. ({e})"}
@@ -587,17 +582,16 @@ async def analyze(
 class AnalyzeTextRequest(BaseModel):
     text:    str
     user_id: str  = "guest"
-    history: list = []  # full conversation history
+    history: list = []
 
 @app.post("/analyze-text")
 async def analyze_text(request: AnalyzeTextRequest):
     if not request.text.strip():
         raise HTTPException(400, "No text provided")
     prompt = (
-        f"The user has pasted their blood report values:\n\n{request.text[:5000]}\n\n"
-        f"Analyse this fully as a blood report specialist following your complete analysis format. "
-        f"You MUST include all four sections: parameter analysis, overall summary, what to do next, "
-        f"food and nutrition recommendations (with specific foods to eat and avoid), and lifestyle tips."
+        f"The user pasted blood report values:\n\n{request.text[:5000]}\n\n"
+        f"Analyse fully as a blood report specialist. Include all four sections: "
+        f"parameter analysis, overall summary, what to do next, food & nutrition recommendations, lifestyle tips."
     )
     analysis = call_groq(prompt, request.history)
     save_chat(request.user_id, f"[Pasted report]\n\n{request.text[:2000]}", analysis)
@@ -642,11 +636,7 @@ async def download_pdf(request: PDFRequest):
         return StreamingResponse(
             buf,
             media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{fn}"',
-                "Content-Type": "application/pdf",
-                "Access-Control-Expose-Headers": "Content-Disposition",
-            }
+            headers={"Content-Disposition": f'attachment; filename="{fn}"'}
         )
     except Exception as e:
         traceback.print_exc()
@@ -665,19 +655,16 @@ async def download_pdf_form(name: str = Form("Patient"), conversation: str = For
         return StreamingResponse(
             buf,
             media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{fn}"',
-                "Content-Type": "application/pdf",
-                "Access-Control-Expose-Headers": "Content-Disposition",
-            }
+            headers={"Content-Disposition": f'attachment; filename="{fn}"'}
         )
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(500, f"PDF generation failed: {e}")
 
+# ─────────────────────────────────────────────
+# RUN
+# ─────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    # Local dev: port 8000 with reload
-    # On Render: use start command: uvicorn brain:app --host 0.0.0.0 --port 10000
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("brain:app", host="0.0.0.0", port=port, reload=False)
