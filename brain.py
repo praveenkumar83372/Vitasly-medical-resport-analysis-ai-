@@ -141,10 +141,17 @@ try:
     import firebase_admin
     from firebase_admin import credentials, firestore
     if not firebase_admin._apps:
-        cred = credentials.Certificate(FIREBASE_CRED)
-        firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("Firebase connected")
+        # Render stores secret files in /etc/secrets/
+        # Fallback to local path for development
+        RENDER_CRED = "/etc/secrets/serviceAccountKey.json"
+        cred_path   = RENDER_CRED if os.path.exists(RENDER_CRED) else FIREBASE_CRED
+        if os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            print(f"Firebase connected via: {cred_path}")
+        else:
+            print("Firebase cred file not found — chat history disabled.")
 except Exception as e:
     print(f"Firebase not connected: {e}")
 
@@ -670,4 +677,7 @@ async def download_pdf_form(name: str = Form("Patient"), conversation: str = For
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("brain:app", host="0.0.0.0", port=8000, reload=True)
+    # Local dev: port 8000 with reload
+    # On Render: use start command: uvicorn brain:app --host 0.0.0.0 --port 10000
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("brain:app", host="0.0.0.0", port=port, reload=False)
