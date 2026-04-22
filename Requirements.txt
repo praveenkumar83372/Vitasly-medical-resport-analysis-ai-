@@ -7,3 +7,5 @@ fpdf2
 pdfplumber
 python-multipart
 python-dotenv
+flask
+gunicorn
