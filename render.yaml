@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: vitalsy-ai
+    env: python
+    buildCommand: pip install -r Requirements.txt
+    startCommand: uvicorn brain:app --host 0.0.0.0 --port 10000
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
