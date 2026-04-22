@@ -5,10 +5,7 @@
 
   pip install fastapi uvicorn groq firebase-admin
               python-docx fpdf2 pdfplumber openpyxl
-              python-multipart python-dotenv
-
-  RUN locally:  python brain.py
-  RUN on Render: uvicorn brain:app --host 0.0.0.0 --port 10000
+              python-multipart python-dotenv jinja2
 ==========================================================
 """
 
@@ -18,7 +15,9 @@ from groq import Groq
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from datetime import datetime, timezone
 from fpdf import FPDF
@@ -174,6 +173,9 @@ def save_chat(user_id, user_msg, ai_msg):
 # FASTAPI — CORS fully open for all origins
 # ─────────────────────────────────────────────
 app = FastAPI(title="Vitalsy Elite AI", version="4.0")
+
+# Setup for HTML Templates
+templates = Jinja2Templates(directory="templates")
 
 app.add_middleware(
     CORSMiddleware,
@@ -496,10 +498,32 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
     return pdf.output()
 
 # ─────────────────────────────────────────────
-# ROUTES
+# ROUTES (REVISED TO SERVE HTML WEBSITE)
 # ─────────────────────────────────────────────
-@app.get("/")
-def root():
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """Serves the main landing page."""
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Serves the login page."""
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/signup", response_class=HTMLResponse)
+async def signup_page(request: Request):
+    """Serves the signup page."""
+    return templates.TemplateResponse("signup.html", {"request": request})
+
+@app.get("/main", response_class=HTMLResponse)
+async def main_page(request: Request):
+    """Serves the main dashboard page."""
+    return templates.TemplateResponse("main.html", {"request": request})
+
+@app.get("/api/status")
+def api_status():
+    """Endpoint to check if API is running (replaces old root)."""
     return {"status": "Vitalsy Elite AI is running", "version": "4.0"}
 
 @app.get("/health")
@@ -518,16 +542,16 @@ async def chat(request: ChatRequest):
     return {
         "reply": reply,
         "new_history_entry": [
-            {"role": "user",      "content": request.message},
+            {"role": "user",       "content": request.message},
             {"role": "assistant", "content": reply},
         ]
     }
 
 @app.post("/analyze")
 async def analyze(
-    file:    UploadFile = File(...),
-    user_id: str        = Form("guest"),
-    history: str        = Form("[]"),
+    file:     UploadFile = File(...),
+    user_id: str         = Form("guest"),
+    history: str         = Form("[]"),
 ):
     filename = file.filename or "upload"
     ext      = os.path.splitext(filename)[1].lower()
@@ -551,7 +575,7 @@ async def analyze(
             return {
                 "analysis": analysis, "filename": filename,
                 "new_history_entry": [
-                    {"role": "user",      "content": f"[Uploaded blood report image: {filename}]"},
+                    {"role": "user",       "content": f"[Uploaded blood report image: {filename}]"},
                     {"role": "assistant", "content": analysis},
                 ]
             }
@@ -571,7 +595,7 @@ async def analyze(
         return {
             "analysis": analysis, "filename": filename,
             "new_history_entry": [
-                {"role": "user",      "content": f"[Uploaded blood report: {filename}]\n\n{text[:3000]}"},
+                {"role": "user",       "content": f"[Uploaded blood report: {filename}]\n\n{text[:3000]}"},
                 {"role": "assistant", "content": analysis},
             ]
         }
@@ -598,7 +622,7 @@ async def analyze_text(request: AnalyzeTextRequest):
     return {
         "analysis": analysis,
         "new_history_entry": [
-            {"role": "user",      "content": f"[Pasted blood report values]\n\n{request.text[:3000]}"},
+            {"role": "user",       "content": f"[Pasted blood report values]\n\n{request.text[:3000]}"},
             {"role": "assistant", "content": analysis},
         ]
     }
