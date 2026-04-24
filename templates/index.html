@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Vitalsy | Know Your Blood Before Your Doctor Does</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -17,7 +17,7 @@
             --border: rgba(255,255,255,0.06);
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html { scroll-behavior: smooth; }
 
         body {
@@ -27,7 +27,6 @@
             overflow-x: hidden;
         }
 
-        /* ── LOGO FONT — matches the image: bold italic condensed ── */
         .logo-text {
             font-family: 'Barlow Condensed', sans-serif;
             font-style: italic;
@@ -37,10 +36,7 @@
             line-height: 1;
         }
 
-        /* ── LOGO ICON — emerald rounded square with white rounded-square stroke inside ── */
         .logo-icon {
-            width: 36px;
-            height: 36px;
             background: #10B981;
             border-radius: 10px;
             display: flex;
@@ -50,20 +46,16 @@
             box-shadow: 0 0 18px -4px rgba(16,185,129,0.5);
         }
         .logo-icon-inner {
-            width: 16px;
-            height: 16px;
             border: 2.5px solid rgba(255,255,255,0.95);
             border-radius: 4px;
         }
 
-        /* ── GLASS ── */
         .glass {
             background: rgba(10,15,28,0.75);
             backdrop-filter: blur(20px);
             border: 1px solid var(--border);
         }
 
-        /* ── GLOW ── */
         .em-glow    { box-shadow: 0 0 40px -8px rgba(16,185,129,0.35); }
         .em-glow-sm { box-shadow: 0 0 20px -5px rgba(16,185,129,0.25); }
 
@@ -73,6 +65,32 @@
             background: rgba(5,7,10,0.97) !important;
             border-bottom: 1px solid rgba(16,185,129,0.12);
         }
+
+        /* Mobile nav menu */
+        #mobile-menu {
+            display: none;
+            position: fixed;
+            inset: 0;
+            top: 60px;
+            background: rgba(5,7,10,0.98);
+            backdrop-filter: blur(20px);
+            z-index: 90;
+            flex-direction: column;
+            padding: 32px 24px;
+            gap: 8px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        #mobile-menu.open { display: flex; }
+        #mobile-menu a {
+            font-size: 18px;
+            font-weight: 700;
+            color: #6B7280;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        #mobile-menu a:active { color: #10B981; }
 
         /* ── TICKER ── */
         .ticker-wrap { overflow: hidden; white-space: nowrap; }
@@ -121,7 +139,7 @@
             box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
         }
         .v-input::placeholder { color: rgba(255,255,255,0.2); }
-        select.v-input option  { background: #0A0F1C; }
+        select.v-input option { background: #0A0F1C; }
 
         /* ── DROPZONE ── */
         #dropzone {
@@ -131,7 +149,7 @@
             cursor: pointer;
             position: relative;
             overflow: hidden;
-            min-height: 145px;
+            min-height: 130px;
         }
         #dropzone:hover, #dropzone.drag-over {
             border-color: var(--em);
@@ -147,14 +165,16 @@
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            padding-bottom: 44px;
+            padding: 24px 16px;
             border-radius: inherit;
             z-index: 10;
         }
 
         /* ── CARDS ── */
         .feature-card { transition: transform 0.4s ease, border-color 0.3s ease; }
-        .feature-card:hover { transform: translateY(-8px); border-color: rgba(16,185,129,0.3); }
+        @media (hover: hover) {
+            .feature-card:hover { transform: translateY(-8px); border-color: rgba(16,185,129,0.3); }
+        }
 
         /* ── RING ── */
         .ring {
@@ -187,24 +207,24 @@
             pointer-events: none; z-index: 0; opacity: 0.4;
         }
 
-        /* ── MESH ── */
         .mesh { position:absolute; border-radius:50%; filter:blur(80px); pointer-events:none; }
 
-        /* ── SCROLLBAR ── */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.3); border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<!-- ═══════ NAV ═══════ -->
-<nav id="navbar" class="fixed w-full z-[100] px-8 py-4 flex justify-between items-center transition-all">
-    <!-- LOGO — matches brand images exactly -->
-    <a href="index.html" class="flex items-center gap-2.5">
-        <div class="logo-icon"><div class="logo-icon-inner"></div></div>
-        <span class="logo-text text-[22px] text-white">VITALS<span class="text-emerald-400">Y.</span></span>
+<!-- ═══ NAV ═══ -->
+<nav id="navbar" class="fixed w-full z-[100] px-4 md:px-8 py-3 md:py-4 flex justify-between items-center transition-all">
+    <a href="/" class="flex items-center gap-2">
+        <div class="logo-icon w-8 h-8 md:w-9 md:h-9">
+            <div class="logo-icon-inner w-[14px] h-[14px]"></div>
+        </div>
+        <span class="logo-text text-[20px] md:text-[22px] text-white">VITALS<span class="text-emerald-400">Y.</span></span>
     </a>
 
+    <!-- Desktop links -->
     <div class="hidden lg:flex gap-10 text-xs font-bold text-gray-500 uppercase tracking-[0.15em]">
         <a href="#tool"     class="hover:text-emerald-400 transition">Try It</a>
         <a href="#features" class="hover:text-emerald-400 transition">Features</a>
@@ -212,79 +232,98 @@
         <a href="#reviews"  class="hover:text-emerald-400 transition">Reviews</a>
     </div>
 
-    <div class="flex items-center gap-4">
-        <a href="login.html"  class="text-xs font-bold text-gray-400 hover:text-white transition uppercase tracking-widest">Login</a>
-        <a href="signup.html" class="bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black px-7 py-3 rounded-full uppercase tracking-wider transition em-glow-sm">
+    <!-- Desktop CTA -->
+    <div class="hidden md:flex items-center gap-4">
+        <a href="/login" class="text-xs font-bold text-gray-400 hover:text-white transition uppercase tracking-widest">Login</a>
+        <a href="/signup" class="bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black px-6 py-3 rounded-full uppercase tracking-wider transition em-glow-sm">
             Get Full Access
         </a>
     </div>
+
+    <!-- Mobile: Login + Hamburger -->
+    <div class="flex md:hidden items-center gap-2">
+        <a href="/login" class="text-xs font-bold text-gray-400 px-3 py-2 rounded-xl bg-white/5">Login</a>
+        <button id="hamburger" onclick="toggleMobileMenu()"
+            class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-gray-400">
+            <i id="hamburger-icon" class="fas fa-bars text-sm"></i>
+        </button>
+    </div>
 </nav>
 
-<!-- ═══════ HERO ═══════ -->
-<section class="relative min-h-screen flex flex-col justify-center pt-28 pb-16 px-6 overflow-hidden">
-    <div class="mesh w-[700px] h-[700px] bg-emerald-500/10 top-[-200px] left-[-200px]"></div>
-    <div class="mesh w-[500px] h-[500px] bg-emerald-600/8 bottom-[-100px] right-[-100px]"></div>
+<!-- Mobile menu -->
+<div id="mobile-menu">
+    <a href="#tool"     onclick="toggleMobileMenu()">Try It Free</a>
+    <a href="#features" onclick="toggleMobileMenu()">Features</a>
+    <a href="#how"      onclick="toggleMobileMenu()">How It Works</a>
+    <a href="#reviews"  onclick="toggleMobileMenu()">Reviews</a>
+    <a href="/signup" class="mt-4 bg-emerald-500 text-white text-center py-4 rounded-2xl font-black uppercase tracking-widest text-sm" style="color:white; border:none;">
+        Get Full Access — Free
+    </a>
+</div>
+
+<!-- ═══ HERO ═══ -->
+<section class="relative min-h-screen flex flex-col justify-center pt-24 md:pt-28 pb-12 px-4 md:px-6 overflow-hidden">
+    <div class="mesh w-[400px] md:w-[700px] h-[400px] md:h-[700px] bg-emerald-500/10 top-[-150px] md:top-[-200px] left-[-150px] md:left-[-200px]"></div>
+    <div class="mesh w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-emerald-600/8 bottom-[-80px] md:bottom-[-100px] right-[-80px] md:right-[-100px]"></div>
 
     <!-- Ticker -->
-    <div class="ticker-wrap py-2.5 bg-emerald-500/5 border-y border-emerald-500/10 absolute top-[72px] left-0 w-full z-10">
-        <div class="ticker text-[10px] font-black text-emerald-500/50 uppercase tracking-[0.35em]">
-            <span class="mx-10">Blood Report Analysis</span><span class="mx-6 text-emerald-500/25">•</span>
-            <span class="mx-10">Instant Biomarker Decoding</span><span class="mx-6 text-emerald-500/25">•</span>
-            <span class="mx-10">CBC · LFT · KFT · Lipid Profile</span><span class="mx-6 text-emerald-500/25">•</span>
-            <span class="mx-10">Personalised Health Insights</span><span class="mx-6 text-emerald-500/25">•</span>
-            <span class="mx-10">Blood Report Analysis</span><span class="mx-6 text-emerald-500/25">•</span>
-            <span class="mx-10">Instant Biomarker Decoding</span><span class="mx-6 text-emerald-500/25">•</span>
-            <span class="mx-10">CBC · LFT · KFT · Lipid Profile</span><span class="mx-6 text-emerald-500/25">•</span>
-            <span class="mx-10">Personalised Health Insights</span><span class="mx-6 text-emerald-500/25">•</span>
+    <div class="ticker-wrap py-2 bg-emerald-500/5 border-y border-emerald-500/10 absolute top-[56px] md:top-[68px] left-0 w-full z-10">
+        <div class="ticker text-[9px] md:text-[10px] font-black text-emerald-500/50 uppercase tracking-[0.2em] md:tracking-[0.35em]">
+            <span class="mx-6 md:mx-10">Blood Report Analysis</span><span class="mx-4 md:mx-6 text-emerald-500/25">•</span>
+            <span class="mx-6 md:mx-10">Biomarker Decoding</span><span class="mx-4 md:mx-6 text-emerald-500/25">•</span>
+            <span class="mx-6 md:mx-10">CBC · LFT · KFT</span><span class="mx-4 md:mx-6 text-emerald-500/25">•</span>
+            <span class="mx-6 md:mx-10">Health Insights</span><span class="mx-4 md:mx-6 text-emerald-500/25">•</span>
+            <span class="mx-6 md:mx-10">Blood Report Analysis</span><span class="mx-4 md:mx-6 text-emerald-500/25">•</span>
+            <span class="mx-6 md:mx-10">Biomarker Decoding</span><span class="mx-4 md:mx-6 text-emerald-500/25">•</span>
+            <span class="mx-6 md:mx-10">CBC · LFT · KFT</span><span class="mx-4 md:mx-6 text-emerald-500/25">•</span>
+            <span class="mx-6 md:mx-10">Health Insights</span><span class="mx-4 md:mx-6 text-emerald-500/25">•</span>
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-20 items-center relative z-10 mt-8">
+    <div class="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-10 md:gap-20 items-center relative z-10 mt-6 md:mt-8">
         <!-- LEFT -->
         <div class="text-left">
-            <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full mb-8">
+            <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-6 md:mb-8">
                 <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
                 AI-Powered · Free to Try
             </div>
 
-            <h1 class="logo-text text-[clamp(4rem,9vw,8rem)] leading-[0.9] text-white mb-8">
+            <h1 class="logo-text text-[clamp(3.2rem,11vw,8rem)] leading-[0.9] text-white mb-6 md:mb-8">
                 Know Your<br>Blood <span class="grad-text">Before</span><br>Your Doctor<br>Does.
             </h1>
 
-            <p class="text-gray-400 text-lg leading-relaxed max-w-md mb-10">
+            <p class="text-gray-400 text-base md:text-lg leading-relaxed max-w-md mb-8 md:mb-10">
                 Upload your blood report. Get a full breakdown of every parameter — what it means, what to eat, and what to watch out for.
-                <span class="text-emerald-400 font-bold"> No login needed to start.</span>
+                <span class="text-emerald-400 font-bold"> No login needed.</span>
             </p>
 
-            <div class="flex flex-wrap gap-4 mb-14">
-                <a href="#tool" class="bg-emerald-500 hover:bg-emerald-400 text-white font-black text-sm px-10 py-4 rounded-2xl transition em-glow uppercase tracking-wide">
+            <div class="flex flex-col sm:flex-row gap-3 md:gap-4 mb-10 md:mb-14">
+                <a href="#tool" class="bg-emerald-500 hover:bg-emerald-400 text-white font-black text-sm px-8 py-4 rounded-2xl transition em-glow uppercase tracking-wide text-center">
                     Try Free Now
                 </a>
-                <a href="signup.html" class="glass text-white font-black text-sm px-10 py-4 rounded-2xl hover:border-emerald-500/40 transition uppercase tracking-wide">
+                <a href="/signup" class="glass text-white font-black text-sm px-8 py-4 rounded-2xl hover:border-emerald-500/40 transition uppercase tracking-wide text-center">
                     Create Account
                 </a>
             </div>
 
-            <div class="flex flex-wrap gap-6 text-xs text-gray-600 font-bold uppercase tracking-widest">
+            <div class="flex flex-wrap gap-4 md:gap-6 text-[10px] md:text-xs text-gray-600 font-bold uppercase tracking-widest">
                 <span><i class="fas fa-shield-alt text-emerald-500 mr-1.5"></i> HIPAA Safe</span>
-                <span><i class="fas fa-lock text-emerald-500 mr-1.5"></i> 256-bit Encrypted</span>
-                <span><i class="fas fa-bolt text-emerald-500 mr-1.5"></i> Results in Seconds</span>
+                <span><i class="fas fa-lock text-emerald-500 mr-1.5"></i> Encrypted</span>
+                <span><i class="fas fa-bolt text-emerald-500 mr-1.5"></i> Instant Results</span>
             </div>
         </div>
 
-        <!-- RIGHT — floating live preview card -->
+        <!-- RIGHT — preview card (desktop only) -->
         <div class="relative hidden lg:block">
             <div class="glass rounded-[2.5rem] p-7 border border-white/8 float-1 em-glow">
-                <!-- card header -->
                 <div class="flex items-center gap-3 mb-6">
-                    <div class="logo-icon"><div class="logo-icon-inner"></div></div>
+                    <div class="logo-icon w-9 h-9"><div class="logo-icon-inner w-[14px] h-[14px]"></div></div>
                     <div>
                         <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Vitalsy AI Report</p>
                         <p class="text-sm font-bold text-white">Blood CBC Analysis</p>
                     </div>
                     <span class="ml-auto text-[9px] bg-emerald-500/15 text-emerald-400 font-black px-3 py-1 rounded-full uppercase">Complete</span>
                 </div>
-
                 <div class="space-y-3 mb-6">
                     <div class="flex justify-between items-center p-3 rounded-xl bg-green-500/8 border border-green-500/15">
                         <span class="text-xs font-bold text-gray-300">Hemoglobin</span>
@@ -308,20 +347,15 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="bg-emerald-500/8 rounded-2xl p-4 border border-emerald-500/15">
                     <p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">AI Summary</p>
-                    <p class="text-xs text-gray-400 leading-relaxed">Overall health looks good. Minor basophil elevation detected — may suggest mild allergy or inflammation. Consult a doctor for follow-up.</p>
+                    <p class="text-xs text-gray-400 leading-relaxed">Overall health looks good. Minor basophil elevation — may suggest mild allergy. Consult a doctor for follow-up.</p>
                 </div>
             </div>
-
-            <!-- Badge 1 -->
             <div class="absolute -top-6 -right-8 glass p-5 rounded-2xl border border-emerald-500/25 float-2 em-glow-sm">
                 <i class="fas fa-check-circle text-emerald-400 text-xl mb-1 block"></i>
                 <p class="text-[10px] font-black text-white">Analysed in 3s</p>
             </div>
-
-            <!-- Badge 2 -->
             <div class="absolute -bottom-8 -left-8 glass p-5 rounded-2xl border border-white/8 float-1">
                 <p class="text-[10px] font-bold text-gray-400 mb-0.5">Parameters Scanned</p>
                 <p class="logo-text text-3xl text-emerald-400">150+</p>
@@ -330,57 +364,43 @@
     </div>
 </section>
 
-<!-- ═══════ STATS ═══════ -->
-<div class="border-y border-white/5 py-10 px-6">
-    <div class="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-        <div>
-            <p class="logo-text text-5xl text-white mb-1">50K+</p>
-            <p class="text-[10px] text-gray-600 font-black uppercase tracking-widest">Reports Analysed</p>
-        </div>
-        <div>
-            <p class="logo-text text-5xl text-emerald-400 mb-1">150+</p>
-            <p class="text-[10px] text-gray-600 font-black uppercase tracking-widest">Biomarkers Covered</p>
-        </div>
-        <div>
-            <p class="logo-text text-5xl text-white mb-1">99.1%</p>
-            <p class="text-[10px] text-gray-600 font-black uppercase tracking-widest">Accuracy Rate</p>
-        </div>
-        <div>
-            <p class="logo-text text-5xl text-emerald-400 mb-1">&lt;5s</p>
-            <p class="text-[10px] text-gray-600 font-black uppercase tracking-widest">Avg Analysis Time</p>
-        </div>
+<!-- ═══ STATS ═══ -->
+<div class="border-y border-white/5 py-8 md:py-10 px-4 md:px-6">
+    <div class="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center">
+        <div><p class="logo-text text-4xl md:text-5xl text-white mb-1">50K+</p><p class="text-[9px] md:text-[10px] text-gray-600 font-black uppercase tracking-widest">Reports Analysed</p></div>
+        <div><p class="logo-text text-4xl md:text-5xl text-emerald-400 mb-1">150+</p><p class="text-[9px] md:text-[10px] text-gray-600 font-black uppercase tracking-widest">Biomarkers</p></div>
+        <div><p class="logo-text text-4xl md:text-5xl text-white mb-1">99.1%</p><p class="text-[9px] md:text-[10px] text-gray-600 font-black uppercase tracking-widest">Accuracy</p></div>
+        <div><p class="logo-text text-4xl md:text-5xl text-emerald-400 mb-1">&lt;5s</p><p class="text-[9px] md:text-[10px] text-gray-600 font-black uppercase tracking-widest">Avg Time</p></div>
     </div>
 </div>
 
-<!-- ═══════ GUEST TOOL ═══════ -->
-<section class="py-28 px-6 relative" id="tool">
-    <div class="mesh w-[500px] h-[500px] bg-emerald-500/6 top-0 left-1/2 -translate-x-1/2"></div>
+<!-- ═══ GUEST TOOL ═══ -->
+<section class="py-16 md:py-28 px-4 md:px-6 relative" id="tool">
+    <div class="mesh w-[400px] h-[400px] bg-emerald-500/6 top-0 left-1/2 -translate-x-1/2"></div>
 
     <div class="max-w-5xl mx-auto relative z-10">
-        <div class="text-center mb-14">
-            <span class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.25em] block mb-3">Free Trial · No Account Needed</span>
-            <h2 class="logo-text text-6xl text-white leading-tight">Try Vitalsy Right Now</h2>
-            <p class="text-gray-500 mt-4 max-w-lg mx-auto text-sm">Fill in your details, upload your blood report, and get instant AI analysis. Preview is free — full report requires an account.</p>
+        <div class="text-center mb-10 md:mb-14">
+            <span class="text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] md:tracking-[0.25em] block mb-2 md:mb-3">Free Trial · No Account Needed</span>
+            <h2 class="logo-text text-4xl md:text-6xl text-white leading-tight">Try Vitalsy Right Now</h2>
+            <p class="text-gray-500 mt-3 md:mt-4 max-w-lg mx-auto text-sm">Fill in your details, upload your blood report, and get instant AI analysis. Preview is free.</p>
         </div>
 
-        <div class="glass rounded-[2.5rem] border border-white/8 overflow-hidden">
-
-            <!-- FORM -->
-            <div class="p-10 grid md:grid-cols-2 gap-10">
+        <div class="glass rounded-[1.5rem] md:rounded-[2.5rem] border border-white/8 overflow-hidden">
+            <div class="p-5 md:p-10 grid md:grid-cols-2 gap-6 md:gap-10">
 
                 <!-- Patient Details -->
-                <div class="space-y-5">
+                <div class="space-y-4 md:space-y-5">
                     <div>
-                        <label class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-2">Patient Name</label>
+                        <label class="text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-[0.15em] md:tracking-[0.2em] block mb-1.5 md:mb-2">Patient Name</label>
                         <input type="text" id="g-name" placeholder="Full name" class="v-input">
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-3 md:gap-4">
                         <div>
-                            <label class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] block mb-2">Age</label>
+                            <label class="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-[0.1em] block mb-1.5">Age</label>
                             <input type="number" id="g-age" placeholder="Age" class="v-input">
                         </div>
                         <div>
-                            <label class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] block mb-2">Gender</label>
+                            <label class="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-[0.1em] block mb-1.5">Gender</label>
                             <select id="g-gender" class="v-input">
                                 <option value="">Select</option>
                                 <option>Male</option>
@@ -390,97 +410,92 @@
                         </div>
                     </div>
                     <div>
-                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] block mb-2">Location</label>
+                        <label class="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-[0.1em] block mb-1.5">Location</label>
                         <input type="text" id="g-loc" placeholder="City / Country" class="v-input">
                     </div>
 
-                    <div class="bg-emerald-500/5 border border-emerald-500/15 rounded-2xl p-5 space-y-2.5">
-                        <p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3">What you get (Free Preview)</p>
-                        <div class="flex items-center gap-2 text-xs text-gray-400"><i class="fas fa-check text-emerald-500 w-4"></i> Parameter-by-parameter breakdown</div>
-                        <div class="flex items-center gap-2 text-xs text-gray-400"><i class="fas fa-check text-emerald-500 w-4"></i> High / Low / Normal status for each value</div>
-                        <div class="flex items-center gap-2 text-xs text-gray-400"><i class="fas fa-check text-emerald-500 w-4"></i> Overall health summary</div>
-                        <div class="border-t border-white/5 pt-2.5 mt-1 space-y-2">
+                    <div class="bg-emerald-500/5 border border-emerald-500/15 rounded-2xl p-4 md:p-5 space-y-2 md:space-y-2.5">
+                        <p class="text-[9px] md:text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2 md:mb-3">What you get (Free)</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-400"><i class="fas fa-check text-emerald-500 w-4 text-xs"></i> Parameter-by-parameter breakdown</div>
+                        <div class="flex items-center gap-2 text-xs text-gray-400"><i class="fas fa-check text-emerald-500 w-4 text-xs"></i> High / Low / Normal status</div>
+                        <div class="flex items-center gap-2 text-xs text-gray-400"><i class="fas fa-check text-emerald-500 w-4 text-xs"></i> Overall health summary</div>
+                        <div class="border-t border-white/5 pt-2 mt-1 space-y-1.5">
                             <div class="flex items-center gap-2 text-xs text-gray-600">
-                                <i class="fas fa-lock w-4"></i>
-                                <span>Full food plan + PDF download</span>
-                                <span class="text-[9px] bg-white/5 text-gray-600 px-2 py-0.5 rounded-full ml-auto font-black">PRO</span>
+                                <i class="fas fa-lock w-4 text-xs"></i>
+                                <span>Full food plan + PDF</span>
+                                <span class="text-[8px] bg-white/5 text-gray-600 px-2 py-0.5 rounded-full ml-auto font-black">PRO</span>
                             </div>
                             <div class="flex items-center gap-2 text-xs text-gray-600">
-                                <i class="fas fa-lock w-4"></i>
-                                <span>Unlimited AI chat about your report</span>
-                                <span class="text-[9px] bg-white/5 text-gray-600 px-2 py-0.5 rounded-full ml-auto font-black">PRO</span>
+                                <i class="fas fa-lock w-4 text-xs"></i>
+                                <span>Unlimited AI chat</span>
+                                <span class="text-[8px] bg-white/5 text-gray-600 px-2 py-0.5 rounded-full ml-auto font-black">PRO</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Upload side -->
-                <div class="flex flex-col gap-5">
+                <!-- Upload -->
+                <div class="flex flex-col gap-4 md:gap-5">
                     <div>
-                        <label class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-2">Upload Blood Report</label>
-                        <div id="dropzone" class="flex flex-col items-center justify-center p-8 text-center"
+                        <label class="text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-[0.15em] block mb-1.5 md:mb-2">Upload Blood Report</label>
+                        <div id="dropzone" class="flex flex-col items-center justify-center p-6 md:p-8 text-center"
                              onclick="document.getElementById('fileInput').click()">
                             <div id="scan-line" class="hidden scan-line"></div>
-                            <div id="dz-icon" class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4 border border-emerald-500/20">
-                                <i class="fas fa-file-medical text-2xl text-emerald-500/60"></i>
+                            <div id="dz-icon" class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-3 md:mb-4 border border-emerald-500/20">
+                                <i class="fas fa-file-medical text-xl md:text-2xl text-emerald-500/60"></i>
                             </div>
-                            <p id="file-status" class="text-sm font-bold text-gray-500">Drop your report here</p>
-                            <p class="text-[10px] text-gray-700 mt-1 uppercase tracking-widest">PDF · DOCX · JPG · PNG · XLSX</p>
-                            <input type="file" id="fileInput" class="hidden"
-                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls,.csv,.txt">
+                            <p id="file-status" class="text-sm font-bold text-gray-500">Tap to upload report</p>
+                            <p class="text-[9px] text-gray-700 mt-1 uppercase tracking-widest">PDF · DOCX · JPG · PNG</p>
+                            <input type="file" id="fileInput" class="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls,.csv,.txt">
                         </div>
                     </div>
 
                     <button onclick="handleGuestAnalysis()" id="analyzeBtn"
-                        class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-black text-sm py-5 rounded-2xl uppercase tracking-widest transition em-glow flex items-center justify-center gap-3">
-                        <i class="fas fa-dna"></i> Run Vitalsy AI Analysis
+                        class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-black text-sm py-4 md:py-5 rounded-2xl uppercase tracking-widest transition em-glow flex items-center justify-center gap-3">
+                        <i class="fas fa-dna"></i> Run Vitalsy AI
                     </button>
 
-                    <p class="text-center text-[10px] text-gray-700 font-bold uppercase tracking-widest">
-                        No account needed · Results in seconds
+                    <p class="text-center text-[9px] text-gray-700 font-bold uppercase tracking-widest">
+                        No account needed · Instant results
                     </p>
                 </div>
             </div>
 
             <!-- RESULT BOX -->
             <div id="resultBox" class="hidden border-t border-white/5">
-                <div class="p-10">
-                    <div class="flex items-center justify-between mb-8">
+                <div class="p-5 md:p-10">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
                         <div>
-                            <h3 class="logo-text text-3xl text-white uppercase">Analysis Output</h3>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1" id="result-subtitle">Vitalsy AI · Blood Report</p>
+                            <h3 class="logo-text text-2xl md:text-3xl text-white uppercase">Analysis Output</h3>
+                            <p class="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1" id="result-subtitle">Vitalsy AI · Blood Report</p>
                         </div>
-                        <span class="text-[9px] bg-emerald-500/10 text-emerald-400 font-black px-4 py-2 rounded-full border border-emerald-500/20 uppercase tracking-widest">
+                        <span class="self-start text-[8px] md:text-[9px] bg-emerald-500/10 text-emerald-400 font-black px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-emerald-500/20 uppercase tracking-widest whitespace-nowrap">
                             <i class="fas fa-circle text-emerald-400 animate-pulse mr-1" style="font-size:6px"></i> AI Complete
                         </span>
                     </div>
 
-                    <!-- Visible preview -->
                     <div id="preview-result"
-                         class="bg-[#080C16] rounded-3xl border border-white/5 p-8 mb-4 leading-relaxed text-gray-300 text-sm whitespace-pre-wrap"></div>
+                         class="bg-[#080C16] rounded-2xl md:rounded-3xl border border-white/5 p-5 md:p-8 mb-4 leading-relaxed text-gray-300 text-sm whitespace-pre-wrap"></div>
 
-                    <!-- Blurred + paywall -->
-                    <div class="relative rounded-3xl overflow-hidden" id="paywall-section">
+                    <div class="relative rounded-2xl md:rounded-3xl overflow-hidden" id="paywall-section">
                         <div id="full-result"
-                             class="blur-paywall bg-[#080C16] border border-white/5 p-8 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap rounded-3xl"
-                             style="max-height:280px; overflow:hidden;"></div>
+                             class="blur-paywall bg-[#080C16] border border-white/5 p-5 md:p-8 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap rounded-2xl md:rounded-3xl"
+                             style="max-height:220px; overflow:hidden;"></div>
 
                         <div class="paywall-overlay">
-                            <div class="text-center max-w-sm">
-                                <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas fa-lock text-emerald-400 text-lg"></i>
+                            <div class="text-center max-w-xs w-full">
+                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mx-auto mb-3 md:mb-4">
+                                    <i class="fas fa-lock text-emerald-400 text-base md:text-lg"></i>
                                 </div>
-                                <h4 class="logo-text text-2xl text-white mb-2">Full Report Locked</h4>
-                                <p class="text-gray-500 text-xs mb-6 leading-relaxed">
-                                    Full food plan, lifestyle tips, PDF download, and unlimited AI chat are unlocked with a free account.
+                                <h4 class="logo-text text-xl md:text-2xl text-white mb-2">Full Report Locked</h4>
+                                <p class="text-gray-500 text-xs mb-4 md:mb-6 leading-relaxed px-2">
+                                    Full food plan, PDF download, and unlimited AI chat with a free account.
                                 </p>
-                                <div class="flex gap-3 justify-center">
-                                    <a href="signup.html"
-                                       class="bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black px-7 py-3 rounded-xl uppercase tracking-wider transition em-glow">
+                                <div class="flex flex-col sm:flex-row gap-2 md:gap-3 justify-center">
+                                    <a href="/signup" class="bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black px-6 py-3 rounded-xl uppercase tracking-wider transition em-glow text-center">
                                         Create Free Account
                                     </a>
-                                    <a href="login.html"
-                                       class="glass text-white text-xs font-black px-7 py-3 rounded-xl hover:border-emerald-500/40 transition uppercase tracking-wider">
+                                    <a href="/login" class="glass text-white text-xs font-black px-6 py-3 rounded-xl hover:border-emerald-500/40 transition uppercase tracking-wider text-center">
                                         Log In
                                     </a>
                                 </div>
@@ -493,153 +508,141 @@
     </div>
 </section>
 
-<!-- ═══════ FEATURES ═══════ -->
-<section class="py-28 px-6 max-w-7xl mx-auto" id="features">
-    <div class="text-center mb-16 fade-up">
-        <span class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.25em] block mb-3">Why Vitalsy</span>
-        <h2 class="logo-text text-6xl text-white leading-tight">The Vitalsy Advantage.</h2>
-        <p class="text-gray-500 mt-4 max-w-lg mx-auto text-sm">Built for patients and doctors alike. No medical degree required to understand your own health.</p>
+<!-- ═══ FEATURES ═══ -->
+<section class="py-16 md:py-28 px-4 md:px-6 max-w-7xl mx-auto" id="features">
+    <div class="text-center mb-10 md:mb-16 fade-up">
+        <span class="text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-2 md:mb-3">Why Vitalsy</span>
+        <h2 class="logo-text text-4xl md:text-6xl text-white leading-tight">The Vitalsy Advantage.</h2>
+        <p class="text-gray-500 mt-3 md:mt-4 max-w-lg mx-auto text-sm">No medical degree required to understand your own health.</p>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-6">
-        <div class="feature-card glass p-10 rounded-[2.5rem] text-left border border-white/5 fade-up">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-7">
-                <i class="fas fa-bolt text-2xl text-emerald-400"></i>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+        <div class="feature-card glass p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] text-left border border-white/5 fade-up">
+            <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-5 md:mb-7">
+                <i class="fas fa-bolt text-xl md:text-2xl text-emerald-400"></i>
             </div>
-            <h3 class="logo-text text-2xl text-white mb-3">Instant Decoding</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">Turn complex medical jargon into plain-English insights. Know what every number means for your body.</p>
+            <h3 class="logo-text text-xl md:text-2xl text-white mb-2 md:mb-3">Instant Decoding</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">Turn complex medical jargon into plain-English insights instantly.</p>
         </div>
-        <div class="feature-card glass p-10 rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.1s">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-7">
-                <i class="fas fa-utensils text-2xl text-emerald-400"></i>
+        <div class="feature-card glass p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.1s">
+            <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-5 md:mb-7">
+                <i class="fas fa-utensils text-xl md:text-2xl text-emerald-400"></i>
             </div>
-            <h3 class="logo-text text-2xl text-white mb-3">Food & Lifestyle Plan</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">Personalised food recommendations and lifestyle tips based on your exact blood values. Not generic advice.</p>
+            <h3 class="logo-text text-xl md:text-2xl text-white mb-2 md:mb-3">Food & Lifestyle Plan</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">Personalised food tips based on your exact blood values. Not generic advice.</p>
         </div>
-        <div class="feature-card glass p-10 rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.2s">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-7">
-                <i class="fas fa-comments text-2xl text-emerald-400"></i>
+        <div class="feature-card glass p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.2s">
+            <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-5 md:mb-7">
+                <i class="fas fa-comments text-xl md:text-2xl text-emerald-400"></i>
             </div>
-            <h3 class="logo-text text-2xl text-white mb-3">Chat Your Report</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">Ask follow-up questions about your results. Talk to Vitalsy AI like a real doctor who knows your report.</p>
+            <h3 class="logo-text text-xl md:text-2xl text-white mb-2 md:mb-3">Chat Your Report</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">Talk to Vitalsy AI like a real doctor who knows your report inside out.</p>
         </div>
-        <div class="feature-card glass p-10 rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.05s">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-7">
-                <i class="fas fa-image text-2xl text-emerald-400"></i>
+        <div class="feature-card glass p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] text-left border border-white/5 fade-up">
+            <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-5 md:mb-7">
+                <i class="fas fa-image text-xl md:text-2xl text-emerald-400"></i>
             </div>
-            <h3 class="logo-text text-2xl text-white mb-3">Photo Upload</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">Just photograph your printed report. Our vision AI reads and analyses any image format instantly.</p>
+            <h3 class="logo-text text-xl md:text-2xl text-white mb-2 md:mb-3">Photo Upload</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">Photograph your printed report. Our vision AI reads it instantly.</p>
         </div>
-        <div class="feature-card glass p-10 rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.15s">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-7">
-                <i class="fas fa-file-pdf text-2xl text-emerald-400"></i>
+        <div class="feature-card glass p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.1s">
+            <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-5 md:mb-7">
+                <i class="fas fa-file-pdf text-xl md:text-2xl text-emerald-400"></i>
             </div>
-            <h3 class="logo-text text-2xl text-white mb-3">PDF Report</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">Download a professional medical-grade PDF of your analysis. Print it, share it with your doctor.</p>
+            <h3 class="logo-text text-xl md:text-2xl text-white mb-2 md:mb-3">PDF Report</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">Download a professional medical-grade PDF. Print and share with your doctor.</p>
         </div>
-        <div class="feature-card glass p-10 rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.25s">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-7">
-                <i class="fas fa-shield-alt text-2xl text-emerald-400"></i>
+        <div class="feature-card glass p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.2s">
+            <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-5 md:mb-7">
+                <i class="fas fa-shield-alt text-xl md:text-2xl text-emerald-400"></i>
             </div>
-            <h3 class="logo-text text-2xl text-white mb-3">Fully Private</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">Your health data is 256-bit encrypted. We never share, sell, or use your medical information.</p>
+            <h3 class="logo-text text-xl md:text-2xl text-white mb-2 md:mb-3">Fully Private</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">256-bit encrypted. We never share or sell your medical data. Ever.</p>
         </div>
     </div>
 </section>
 
-<!-- ═══════ HOW IT WORKS ═══════ -->
-<section class="py-28 px-6 bg-emerald-500/[0.015]" id="how">
+<!-- ═══ HOW IT WORKS ═══ -->
+<section class="py-16 md:py-28 px-4 md:px-6 bg-emerald-500/[0.015]" id="how">
     <div class="max-w-5xl mx-auto">
-        <div class="text-center mb-16 fade-up">
-            <span class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.25em] block mb-3">The Process</span>
-            <h2 class="logo-text text-6xl text-white">Understand Your Report<br><span class="grad-text">in 3 Steps.</span></h2>
+        <div class="text-center mb-10 md:mb-16 fade-up">
+            <span class="text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-2 md:mb-3">The Process</span>
+            <h2 class="logo-text text-4xl md:text-6xl text-white">Understand in<br><span class="grad-text">3 Steps.</span></h2>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-8">
-            <div class="relative fade-up">
-                <div class="glass rounded-[2rem] p-8 text-left h-full border border-white/5">
-                    <div class="logo-text text-7xl text-emerald-500/15 mb-4 leading-none">01</div>
-                    <h3 class="logo-text text-2xl text-white mb-3">Upload Your Report</h3>
-                    <p class="text-gray-500 text-sm leading-relaxed">Any format works — PDF, photo, Word doc, Excel, or just type your values. We read it all.</p>
-                </div>
-                <div class="hidden md:block absolute top-1/2 -right-4 z-10">
-                    <i class="fas fa-arrow-right text-emerald-500/25 text-xl"></i>
-                </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
+            <div class="glass rounded-[1.5rem] md:rounded-[2rem] p-6 md:p-8 text-left border border-white/5 fade-up">
+                <div class="logo-text text-6xl md:text-7xl text-emerald-500/15 mb-3 md:mb-4 leading-none">01</div>
+                <h3 class="logo-text text-xl md:text-2xl text-white mb-2 md:mb-3">Upload Your Report</h3>
+                <p class="text-gray-500 text-sm leading-relaxed">PDF, photo, Word doc, Excel, or type your values. We read it all.</p>
             </div>
-            <div class="fade-up" style="transition-delay:0.1s">
-                <div class="glass rounded-[2rem] p-8 text-left h-full border border-emerald-500/15">
-                    <div class="logo-text text-7xl text-emerald-500/15 mb-4 leading-none">02</div>
-                    <h3 class="logo-text text-2xl text-white mb-3">AI Scans Everything</h3>
-                    <p class="text-gray-500 text-sm leading-relaxed">Vitalsy reads every parameter, compares to normal ranges, and builds your complete health picture in seconds.</p>
-                </div>
+            <div class="glass rounded-[1.5rem] md:rounded-[2rem] p-6 md:p-8 text-left border border-emerald-500/15 fade-up" style="transition-delay:0.1s">
+                <div class="logo-text text-6xl md:text-7xl text-emerald-500/15 mb-3 md:mb-4 leading-none">02</div>
+                <h3 class="logo-text text-xl md:text-2xl text-white mb-2 md:mb-3">AI Scans Everything</h3>
+                <p class="text-gray-500 text-sm leading-relaxed">Vitalsy reads every parameter, compares ranges, builds your health picture in seconds.</p>
             </div>
-            <div class="relative fade-up" style="transition-delay:0.2s">
-                <div class="hidden md:block absolute top-1/2 -left-4 z-10">
-                    <i class="fas fa-arrow-right text-emerald-500/25 text-xl"></i>
-                </div>
-                <div class="glass rounded-[2rem] p-8 text-left h-full border border-white/5">
-                    <div class="logo-text text-7xl text-emerald-500/15 mb-4 leading-none">03</div>
-                    <h3 class="logo-text text-2xl text-white mb-3">Get Your Insights</h3>
-                    <p class="text-gray-500 text-sm leading-relaxed">Plain-English results, food recommendations, lifestyle tips, and a doctor-ready PDF — all in one place.</p>
-                </div>
+            <div class="glass rounded-[1.5rem] md:rounded-[2rem] p-6 md:p-8 text-left border border-white/5 fade-up" style="transition-delay:0.2s">
+                <div class="logo-text text-6xl md:text-7xl text-emerald-500/15 mb-3 md:mb-4 leading-none">03</div>
+                <h3 class="logo-text text-xl md:text-2xl text-white mb-2 md:mb-3">Get Your Insights</h3>
+                <p class="text-gray-500 text-sm leading-relaxed">Plain-English results, food tips, lifestyle advice, and a doctor-ready PDF.</p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ═══════ REVIEWS ═══════ -->
-<section class="py-28 px-6 max-w-7xl mx-auto" id="reviews">
-    <div class="text-center mb-16 fade-up">
-        <span class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.25em] block mb-3">Testimonials</span>
-        <h2 class="logo-text text-6xl text-white">Real People.<br>Real Results.</h2>
+<!-- ═══ REVIEWS ═══ -->
+<section class="py-16 md:py-28 px-4 md:px-6 max-w-7xl mx-auto" id="reviews">
+    <div class="text-center mb-10 md:mb-16 fade-up">
+        <span class="text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-2 md:mb-3">Testimonials</span>
+        <h2 class="logo-text text-4xl md:text-6xl text-white">Real People.<br>Real Results.</h2>
     </div>
 
-    <div class="grid md:grid-cols-2 gap-6">
-        <div class="feature-card glass p-10 rounded-[2.5rem] text-left border border-white/5 fade-up">
-            <div class="flex gap-1 text-emerald-400 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <div class="feature-card glass p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] text-left border border-white/5 fade-up">
+            <div class="flex gap-1 text-emerald-400 mb-4 md:mb-6">
                 <i class="fas fa-star text-xs"></i><i class="fas fa-star text-xs"></i><i class="fas fa-star text-xs"></i><i class="fas fa-star text-xs"></i><i class="fas fa-star text-xs"></i>
             </div>
-            <p class="text-lg font-bold text-gray-300 italic leading-relaxed mb-8">"I understood my anemia results before the doctor even explained them. Vitalsy broke it down so simply. I knew exactly what to eat the same day."</p>
-            <div class="flex items-center gap-4 border-t border-white/5 pt-6">
-                <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                    <i class="fas fa-user text-emerald-400"></i>
+            <p class="text-base md:text-lg font-bold text-gray-300 italic leading-relaxed mb-6 md:mb-8">"I understood my anemia results before the doctor explained them. I knew exactly what to eat the same day."</p>
+            <div class="flex items-center gap-3 md:gap-4 border-t border-white/5 pt-4 md:pt-6">
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-user text-emerald-400 text-sm"></i>
                 </div>
                 <div>
                     <p class="text-sm font-black text-white uppercase tracking-wider">Sarah J.</p>
-                    <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Patient · Chennai</p>
+                    <p class="text-[9px] md:text-[10px] text-gray-600 font-bold uppercase tracking-widest">Patient · Chennai</p>
                 </div>
             </div>
         </div>
-        <div class="feature-card glass p-10 rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.1s">
-            <div class="flex gap-1 text-emerald-400 mb-6">
+        <div class="feature-card glass p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] text-left border border-white/5 fade-up" style="transition-delay:0.1s">
+            <div class="flex gap-1 text-emerald-400 mb-4 md:mb-6">
                 <i class="fas fa-star text-xs"></i><i class="fas fa-star text-xs"></i><i class="fas fa-star text-xs"></i><i class="fas fa-star text-xs"></i><i class="fas fa-star text-xs"></i>
             </div>
-            <p class="text-lg font-bold text-gray-300 italic leading-relaxed mb-8">"As a practitioner, the automated clinical notes Vitalsy generates save me 20 minutes per patient. The biomarker interpretation is genuinely impressive."</p>
-            <div class="flex items-center gap-4 border-t border-white/5 pt-6">
-                <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                    <i class="fas fa-user-md text-emerald-400"></i>
+            <p class="text-base md:text-lg font-bold text-gray-300 italic leading-relaxed mb-6 md:mb-8">"The automated clinical notes Vitalsy generates save me 20 minutes per patient. The biomarker interpretation is genuinely impressive."</p>
+            <div class="flex items-center gap-3 md:gap-4 border-t border-white/5 pt-4 md:pt-6">
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-user-md text-emerald-400 text-sm"></i>
                 </div>
                 <div>
                     <p class="text-sm font-black text-emerald-400 uppercase tracking-wider">Dr. Michael Chen</p>
-                    <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest">MD · General Physician</p>
+                    <p class="text-[9px] md:text-[10px] text-gray-600 font-bold uppercase tracking-widest">MD · General Physician</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ═══════ CTA ═══════ -->
-<section class="py-20 px-6">
-    <div class="max-w-4xl mx-auto glass rounded-[3rem] p-16 text-center border border-emerald-500/15 em-glow relative overflow-hidden">
-        <div class="mesh w-[400px] h-[400px] bg-emerald-500/10 top-[-150px] left-1/2 -translate-x-1/2"></div>
+<!-- ═══ CTA ═══ -->
+<section class="py-12 md:py-20 px-4 md:px-6">
+    <div class="max-w-4xl mx-auto glass rounded-[2rem] md:rounded-[3rem] p-8 md:p-16 text-center border border-emerald-500/15 em-glow relative overflow-hidden">
+        <div class="mesh w-[300px] md:w-[400px] h-[300px] md:h-[400px] bg-emerald-500/10 top-[-100px] md:top-[-150px] left-1/2 -translate-x-1/2"></div>
         <div class="relative z-10">
-            <h2 class="logo-text text-6xl text-white mb-4 leading-tight">Your Health.<br><span class="grad-text">Your Data.</span></h2>
-            <p class="text-gray-500 mb-10 max-w-md mx-auto text-sm">Create a free account to unlock the full report, food plan, PDF download, and unlimited AI chat about your results.</p>
-            <div class="flex flex-wrap gap-4 justify-center">
-                <a href="signup.html" class="bg-emerald-500 hover:bg-emerald-400 text-white font-black text-sm px-12 py-4 rounded-2xl transition em-glow uppercase tracking-wide">
+            <h2 class="logo-text text-4xl md:text-6xl text-white mb-3 md:mb-4 leading-tight">Your Health.<br><span class="grad-text">Your Data.</span></h2>
+            <p class="text-gray-500 mb-7 md:mb-10 max-w-md mx-auto text-sm">Create a free account to unlock the full report, food plan, PDF download, and unlimited AI chat.</p>
+            <div class="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
+                <a href="/signup" class="bg-emerald-500 hover:bg-emerald-400 text-white font-black text-sm px-8 md:px-12 py-4 rounded-2xl transition em-glow uppercase tracking-wide text-center">
                     Create Free Account
                 </a>
-                <a href="#tool" class="glass text-white font-black text-sm px-12 py-4 rounded-2xl hover:border-emerald-500/40 transition uppercase tracking-wide">
+                <a href="#tool" class="glass text-white font-black text-sm px-8 md:px-12 py-4 rounded-2xl hover:border-emerald-500/40 transition uppercase tracking-wide text-center">
                     Try Without Login
                 </a>
             </div>
@@ -647,18 +650,18 @@
     </div>
 </section>
 
-<!-- ═══════ FOOTER ═══════ -->
-<footer class="border-t border-white/5 py-14 px-6">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+<!-- ═══ FOOTER ═══ -->
+<footer class="border-t border-white/5 py-10 md:py-14 px-4 md:px-6">
+    <div class="max-w-7xl mx-auto flex flex-col items-center gap-6 md:flex-row md:justify-between md:gap-8">
         <div class="flex items-center gap-2.5">
-            <div class="logo-icon"><div class="logo-icon-inner"></div></div>
+            <div class="logo-icon w-8 h-8 md:w-9 md:h-9"><div class="logo-icon-inner w-[14px] h-[14px]"></div></div>
             <div>
-                <span class="logo-text text-2xl text-white">VITALS<span class="text-emerald-400">Y.</span></span>
-                <p class="text-[10px] text-gray-600 font-black uppercase tracking-[0.25em]">Intelligent Blood Report Analysis</p>
+                <span class="logo-text text-xl md:text-2xl text-white">VITALS<span class="text-emerald-400">Y.</span></span>
+                <p class="text-[9px] text-gray-600 font-black uppercase tracking-[0.2em]">Intelligent Blood Report Analysis</p>
             </div>
         </div>
-        <p class="text-gray-600 text-xs font-bold text-center">© 2026 Vitalsy Pvt. Ltd. — AI analysis is for informational purposes only. Always consult a licensed doctor.</p>
-        <div class="flex gap-8 text-[11px] text-gray-700 font-black uppercase tracking-[0.2em]">
+        <p class="text-gray-600 text-xs font-bold text-center">© 2026 Vitalsy Pvt. Ltd. — Always consult a licensed doctor.</p>
+        <div class="flex gap-6 md:gap-8 text-[10px] md:text-[11px] text-gray-700 font-black uppercase tracking-[0.2em]">
             <a href="#" class="hover:text-emerald-500 transition">Privacy</a>
             <a href="#" class="hover:text-emerald-500 transition">Terms</a>
             <a href="#" class="hover:text-emerald-500 transition">Docs</a>
@@ -666,21 +669,29 @@
     </div>
 </footer>
 
-<!-- ═══════ SCRIPTS ═══════ -->
 <script>
-    const API = "http://127.0.0.1:8000";
+    const API = "https://vitalsy-ai.onrender.com";
 
-    // NAV scroll
+    // Mobile menu
+    function toggleMobileMenu() {
+        const menu = document.getElementById("mobile-menu");
+        const icon = document.getElementById("hamburger-icon");
+        const isOpen = menu.classList.toggle("open");
+        icon.className = isOpen ? "fas fa-times text-sm" : "fas fa-bars text-sm";
+        document.body.style.overflow = isOpen ? "hidden" : "";
+    }
+
+    // Nav scroll
     window.addEventListener("scroll", () => {
         document.getElementById("navbar").classList.toggle("scrolled", window.scrollY > 40);
     });
 
-    // Dropzone drag & drop
+    // Dropzone
     const dropzone  = document.getElementById("dropzone");
     const fileInput = document.getElementById("fileInput");
 
     dropzone.addEventListener("dragover",  e => { e.preventDefault(); dropzone.classList.add("drag-over"); });
-    dropzone.addEventListener("dragleave", ()  => dropzone.classList.remove("drag-over"));
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag-over"));
     dropzone.addEventListener("drop", e => {
         e.preventDefault();
         dropzone.classList.remove("drag-over");
@@ -694,18 +705,19 @@
     });
 
     function setFileReady(name) {
-        document.getElementById("file-status").textContent = name;
+        const short = name.length > 24 ? name.substring(0, 22) + "..." : name;
+        document.getElementById("file-status").textContent = short;
         document.getElementById("file-status").classList.add("text-emerald-400");
         document.getElementById("dz-icon").innerHTML = '<i class="fas fa-check-circle text-2xl text-emerald-400"></i>';
     }
 
-    // Fade-up on scroll
+    // Fade up
     const obs = new IntersectionObserver(entries => {
         entries.forEach(e => { if (e.isIntersecting) e.target.classList.add("visible"); });
     }, { threshold: 0.1 });
     document.querySelectorAll(".fade-up").forEach(el => obs.observe(el));
 
-    // ── GUEST ANALYSIS ──
+    // Guest Analysis
     async function handleGuestAnalysis() {
         const name   = document.getElementById("g-name").value.trim();
         const age    = document.getElementById("g-age").value.trim();
@@ -719,7 +731,7 @@
         const scanLine = document.getElementById("scan-line");
 
         btn.disabled  = true;
-        btn.innerHTML = `<div class="ring"></div><span>Scanning Report...</span>`;
+        btn.innerHTML = `<div class="ring"></div><span>Scanning...</span>`;
         scanLine.classList.remove("hidden");
         dropzone.classList.add("border-emerald-500");
 
@@ -735,19 +747,19 @@
             scanLine.classList.add("hidden");
             dropzone.classList.remove("border-emerald-500");
             btn.disabled  = false;
-            btn.innerHTML = `<i class="fas fa-dna"></i> Re-Analyse Report`;
+            btn.innerHTML = `<i class="fas fa-dna"></i> Re-Analyse`;
 
             if (data.analysis) {
                 showResults(name, age, gender, data.analysis);
             } else {
-                alert("Analysis failed. Make sure brain.py is running on port 8000.");
+                alert("Analysis failed. Please try again.");
             }
         } catch(e) {
             scanLine.classList.add("hidden");
             dropzone.classList.remove("border-emerald-500");
             btn.disabled  = false;
-            btn.innerHTML = `<i class="fas fa-dna"></i> Run Vitalsy AI Analysis`;
-            alert("Cannot connect to Vitalsy AI. Please make sure brain.py is running on port 8000.");
+            btn.innerHTML = `<i class="fas fa-dna"></i> Run Vitalsy AI`;
+            alert("Cannot connect to Vitalsy AI. Please try again.");
         }
     }
 
@@ -757,16 +769,15 @@
         const preview = lines.slice(0, splitAt).join("\n");
         const locked  = lines.slice(splitAt).join("\n");
 
-        document.getElementById("preview-result").textContent   = preview;
-        document.getElementById("full-result").textContent      = locked || "Full food plan, nutrition details, and lifestyle tips included in the full report...";
-        document.getElementById("result-subtitle").textContent  = `${name}${age ? " · Age " + age : ""}${gender ? " · " + gender : ""} · Vitalsy AI`;
+        document.getElementById("preview-result").textContent  = preview;
+        document.getElementById("full-result").textContent     = locked || "Full food plan and lifestyle recommendations included in the full report...";
+        document.getElementById("result-subtitle").textContent = `${name}${age ? " · Age " + age : ""}${gender ? " · " + gender : ""} · Vitalsy AI`;
 
         const box = document.getElementById("resultBox");
         box.classList.remove("hidden");
 
-        const paywall = document.getElementById("paywall-section");
-        if (!locked) { paywall.classList.add("hidden"); }
-        else          { paywall.classList.remove("hidden"); }
+        if (!locked) { document.getElementById("paywall-section").classList.add("hidden"); }
+        else          { document.getElementById("paywall-section").classList.remove("hidden"); }
 
         setTimeout(() => box.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
     }

@@ -5,7 +5,10 @@
 
   pip install fastapi uvicorn groq firebase-admin
               python-docx fpdf2 pdfplumber openpyxl
-              python-multipart python-dotenv jinja2
+              python-multipart python-dotenv
+
+  RUN locally:  python brain.py
+  RUN on Render: uvicorn brain:app --host 0.0.0.0 --port 10000
 ==========================================================
 """
 
@@ -15,9 +18,7 @@ from groq import Groq
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse, FileResponse
 from pydantic import BaseModel
 from datetime import datetime, timezone
 from fpdf import FPDF
@@ -173,9 +174,6 @@ def save_chat(user_id, user_msg, ai_msg):
 # FASTAPI — CORS fully open for all origins
 # ─────────────────────────────────────────────
 app = FastAPI(title="Vitalsy Elite AI", version="4.0")
-
-# Setup for HTML Templates
-templates = Jinja2Templates(directory="templates")
 
 app.add_middleware(
     CORSMiddleware,
@@ -495,35 +493,55 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
     pdf.set_font("Arial", size=7)
     pdf.cell(0, 4, f"Generated: {now.strftime('%d %B %Y, %I:%M %p')}  |  Report ID: VEA-{now.strftime('%Y%m%d%H%M%S')}", ln=True, align="C")
 
-    return pdf.output()
+    result = pdf.output()
+    if isinstance(result, bytearray):
+        return bytes(result)
+    return result
 
 # ─────────────────────────────────────────────
-# ROUTES (REVISED TO SERVE HTML WEBSITE)
+# ROUTES
 # ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# HTML PAGE SERVING — serve frontend from Render
+# ─────────────────────────────────────────────
+def serve_html(filename: str) -> HTMLResponse:
+    """Read and serve an HTML file from the project root."""
+    paths_to_try = [
+        filename,
+        os.path.join(os.path.dirname(__file__), filename),
+        os.path.join("/opt/render/project/src", filename),
+    ]
+    for path in paths_to_try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return HTMLResponse(content=f.read(), status_code=200)
+    return HTMLResponse(content=f"<h1>File not found: {filename}</h1>", status_code=404)
 
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    """Serves the main landing page."""
-    return templates.TemplateResponse("index.html", {"request": request})
+async def root():
+    return serve_html("index.html")
+
+@app.get("/index.html", response_class=HTMLResponse)
+async def index_page():
+    return serve_html("index.html")
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    """Serves the login page."""
-    return templates.TemplateResponse("login.html", {"request": request})
+@app.get("/login.html", response_class=HTMLResponse)
+async def login_page():
+    return serve_html("login.html")
 
 @app.get("/signup", response_class=HTMLResponse)
-async def signup_page(request: Request):
-    """Serves the signup page."""
-    return templates.TemplateResponse("signup.html", {"request": request})
+@app.get("/signup.html", response_class=HTMLResponse)
+async def signup_page():
+    return serve_html("signup.html")
 
 @app.get("/main", response_class=HTMLResponse)
-async def main_page(request: Request):
-    """Serves the main dashboard page."""
-    return templates.TemplateResponse("main.html", {"request": request})
+@app.get("/main.html", response_class=HTMLResponse)
+async def main_page():
+    return serve_html("main.html")
 
 @app.get("/api/status")
 def api_status():
-    """Endpoint to check if API is running (replaces old root)."""
     return {"status": "Vitalsy Elite AI is running", "version": "4.0"}
 
 @app.get("/health")
@@ -542,16 +560,16 @@ async def chat(request: ChatRequest):
     return {
         "reply": reply,
         "new_history_entry": [
-            {"role": "user",       "content": request.message},
+            {"role": "user",      "content": request.message},
             {"role": "assistant", "content": reply},
         ]
     }
 
 @app.post("/analyze")
 async def analyze(
-    file:     UploadFile = File(...),
-    user_id: str         = Form("guest"),
-    history: str         = Form("[]"),
+    file:    UploadFile = File(...),
+    user_id: str        = Form("guest"),
+    history: str        = Form("[]"),
 ):
     filename = file.filename or "upload"
     ext      = os.path.splitext(filename)[1].lower()
@@ -575,7 +593,7 @@ async def analyze(
             return {
                 "analysis": analysis, "filename": filename,
                 "new_history_entry": [
-                    {"role": "user",       "content": f"[Uploaded blood report image: {filename}]"},
+                    {"role": "user",      "content": f"[Uploaded blood report image: {filename}]"},
                     {"role": "assistant", "content": analysis},
                 ]
             }
@@ -595,7 +613,7 @@ async def analyze(
         return {
             "analysis": analysis, "filename": filename,
             "new_history_entry": [
-                {"role": "user",       "content": f"[Uploaded blood report: {filename}]\n\n{text[:3000]}"},
+                {"role": "user",      "content": f"[Uploaded blood report: {filename}]\n\n{text[:3000]}"},
                 {"role": "assistant", "content": analysis},
             ]
         }
@@ -622,7 +640,7 @@ async def analyze_text(request: AnalyzeTextRequest):
     return {
         "analysis": analysis,
         "new_history_entry": [
-            {"role": "user",       "content": f"[Pasted blood report values]\n\n{request.text[:3000]}"},
+            {"role": "user",      "content": f"[Pasted blood report values]\n\n{request.text[:3000]}"},
             {"role": "assistant", "content": analysis},
         ]
     }
