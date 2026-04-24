@@ -340,6 +340,45 @@ def get_file_path(filename: str):
     return None
 
 # ─────────────────────────────────────────────
+# HTML ROUTES (MISSING — THIS IS THE FIX 🔥)
+# ─────────────────────────────────────────────
+
+@app.get("/", response_class=FileResponse)
+async def root():
+    path = get_file_path("index.html")
+    if not path:
+        raise HTTPException(404, "index.html not found")
+    return FileResponse(path)
+
+@app.get("/login")
+async def login_page():
+    path = get_file_path("login.html")
+    if not path:
+        raise HTTPException(404, "login.html not found")
+    return FileResponse(path)
+
+@app.get("/signup")
+async def signup_page():
+    path = get_file_path("signup.html")
+    if not path:
+        raise HTTPException(404, "signup.html not found")
+    return FileResponse(path)
+
+@app.get("/main")
+async def main_page():
+    path = get_file_path("main.html")
+    if not path:
+        raise HTTPException(404, "main.html not found")
+    return FileResponse(path)
+
+@app.get("/{filename}.html")
+async def serve_html(filename: str):
+    path = get_file_path(f"{filename}.html")
+    if not path:
+        raise HTTPException(404, f"{filename}.html not found")
+    return FileResponse(path)
+
+# ─────────────────────────────────────────────
 # API ROUTES
 # ─────────────────────────────────────────────
 @app.get("/api/status")
@@ -370,6 +409,8 @@ async def analyze(
 async def download_pdf(request: PDFRequest):
     pdf_bytes = build_pdf(request.patient_name, request.conversation)
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=report.pdf"})
+
+
 
 # ─────────────────────────────────────────────
 # RUN
