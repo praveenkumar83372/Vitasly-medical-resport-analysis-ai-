@@ -311,54 +311,33 @@ def build_pdf(patient_name: str, conversation: list) -> bytes:
     return bytes(pdf.output())
 
 # ─────────────────────────────────────────────
-# FIXED FILE SERVING (No manual open/read)
+# FIXED FILE SERVING (UPDATED ONLY THIS PART)
 # ─────────────────────────────────────────────
 def get_file_path(filename: str):
     """Checks various locations to find the HTML file."""
-    # 1. Check current directory
-    if os.path.exists(filename):
-        return filename
-    # 2. Check script directory
+
+    # 1. templates folder (MAIN FIX 🔥)
+    templates_path = os.path.join(os.getcwd(), "templates", filename)
+    if os.path.exists(templates_path):
+        return templates_path
+
+    # 2. Current working directory
+    cwd_path = os.path.join(os.getcwd(), filename)
+    if os.path.exists(cwd_path):
+        return cwd_path
+
+    # 3. Script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     script_path = os.path.join(script_dir, filename)
     if os.path.exists(script_path):
         return script_path
-    # 3. Check Render specific path
-    render_path = os.path.join("/opt/render/project/src", filename)
+
+    # 4. Render path
+    render_path = os.path.join("/opt/render/project/src", "templates", filename)
     if os.path.exists(render_path):
         return render_path
+
     return None
-
-@app.get("/", response_class=FileResponse)
-async def root():
-    path = get_file_path("index.html")
-    if not path: raise HTTPException(404, "index.html not found")
-    return FileResponse(path)
-
-@app.get("/login")
-async def login_page():
-    path = get_file_path("login.html")
-    if not path: raise HTTPException(404, "login.html not found")
-    return FileResponse(path)
-
-@app.get("/signup")
-async def signup_page():
-    path = get_file_path("signup.html")
-    if not path: raise HTTPException(404, "signup.html not found")
-    return FileResponse(path)
-
-@app.get("/main")
-async def main_page():
-    path = get_file_path("main.html")
-    if not path: raise HTTPException(404, "main.html not found")
-    return FileResponse(path)
-
-# Serve .html files directly if requested
-@app.get("/{filename}.html")
-async def serve_html_files(filename: str):
-    path = get_file_path(f"{filename}.html")
-    if not path: raise HTTPException(404, f"{filename}.html not found")
-    return FileResponse(path)
 
 # ─────────────────────────────────────────────
 # API ROUTES
