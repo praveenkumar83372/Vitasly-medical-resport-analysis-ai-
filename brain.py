@@ -140,7 +140,7 @@ If no blood report in conversation yet:
 """
 
 # ─────────────────────────────────────────────
-# FIREBASE  (optional — silent fail)
+# FIREBASE
 # ─────────────────────────────────────────────
 db = None
 try:
@@ -153,9 +153,6 @@ try:
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
             db = firestore.client()
-            print(f"Firebase connected via: {cred_path}")
-        else:
-            print("Firebase cred file not found — chat history disabled.")
 except Exception as e:
     print(f"Firebase not connected: {e}")
 
@@ -171,14 +168,14 @@ def save_chat(user_id, user_msg, ai_msg):
         print("Firebase write error:", e)
 
 # ─────────────────────────────────────────────
-# FASTAPI — CORS fully open for all origins
+# FASTAPI
 # ─────────────────────────────────────────────
 app = FastAPI(title="Vitalsy Elite AI", version="4.0")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,   # must be False when allow_origins=["*"]
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],
@@ -215,10 +212,8 @@ def normalise_history(history: list) -> list:
         elif "parts" in turn:
             parts = turn["parts"]
             text = parts[0] if isinstance(parts, list) and parts else str(parts)
-        else:
-            continue
-        if not text or not str(text).strip():
-            continue
+        else: continue
+        if not text or not str(text).strip(): continue
         groq_role = "assistant" if role in ("model", "assistant") else "user"
         messages.append({"role": groq_role, "content": str(text).strip()})
     return messages
@@ -261,59 +256,22 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
                     r = "\t".join(str(c) if c is not None else "" for c in row)
                     if r.strip(): rows.append(r)
             return "\n".join(rows)
-        except Exception:
-            return ""
+        except: return ""
     if fname.endswith(".csv"):
         text = file_bytes.decode("utf-8", errors="ignore")
         try:
             reader = csv.reader(io.StringIO(text))
             return "\n".join(", ".join(row) for row in reader)
-        except Exception:
-            return text
+        except: return text
     if fname.endswith((".png", ".jpg", ".jpeg")):
         return "[IMAGE_FILE]"
     return file_bytes.decode("utf-8", errors="ignore")
 
 def analyse_image_with_groq(image_bytes: bytes, filename: str) -> str:
     ext       = os.path.splitext(filename)[1].lower().lstrip(".")
-    mime_map  = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"}
-    mime_type = mime_map.get(ext, "image/jpeg")
+    mime_type = "image/png" if ext == "png" else "image/jpeg"
     b64       = base64.standard_b64encode(image_bytes).decode("utf-8")
-
-    vision_instruction = """You are a medical blood report reading specialist.
-
-TASK: Read every single value visible in this blood report image and perform a full analysis.
-
-RULES:
-- Extract ALL test names and values — even if slightly blurry, do your best.
-- Do NOT say the image is unclear. Just read what you can see and work with it.
-- If a value is truly unreadable, note it briefly and continue.
-- For each parameter use this format:
-
-  Test Name
-  Value: X  |  Normal Range: Y  |  Status: High / Low / Normal
-  Meaning: (1 plain English sentence)
-  Tip: (1 practical tip if abnormal — skip if normal)
-
-- After all parameters, write these FOUR sections (all mandatory):
-
-  OVERALL SUMMARY
-  3-4 plain sentences. Reassure if mostly normal.
-
-  WHAT TO DO NEXT
-  3-5 practical bullet points.
-
-  FOOD & NUTRITION RECOMMENDATIONS
-  - Foods to eat more of (with reason based on the specific values)
-  - Foods to reduce or avoid (with reason)
-  - A simple daily meal idea (breakfast, lunch, dinner)
-
-  LIFESTYLE TIPS
-  3-4 specific lifestyle habits based on the results.
-
-- End with: Please consult a qualified doctor before making any medical decisions.
-
-START immediately. Do not say you cannot read the image."""
+    vision_instruction = "You are a medical blood report reading specialist. Extract values and analyze as per rules."
 
     try:
         resp = groq_client.chat.completions.create(
@@ -322,386 +280,117 @@ START immediately. Do not say you cannot read the image."""
                 "role": "user",
                 "content": [
                     {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64}"}},
-                    {"type": "text",      "text": vision_instruction}
+                    {"type": "text", "text": vision_instruction}
                 ]
             }],
             max_tokens=2500,
-            temperature=0.5,
         )
         return resp.choices[0].message.content.strip()
-    except Exception as e:
-        traceback.print_exc()
-        return "I had trouble processing your image. Please try again, or type your blood values directly in the chat."
+    except:
+        return "I had trouble processing your image. Please try again."
 
-# ─────────────────────────────────────────────
-# PDF BUILDER
-# ─────────────────────────────────────────────
 def clean_for_pdf(text: str) -> str:
-    replacements = {
-        "\U0001f534": "[HIGH]", "\U0001f7e1": "[LOW]", "\U0001f7e2": "[NORMAL]",
-        "\u2705": "", "\u26a0\ufe0f": "[!]", "\u274c": "[X]",
-        "\U0001f600": "", "\U0001f601": "", "\U0001f602": "", "\U0001f603": "",
-    }
-    for k, v in replacements.items():
-        text = text.replace(k, v)
     text = text.encode("latin-1", "replace").decode("latin-1")
-    text = re.sub(r'\*{1,3}(.*?)\*{1,3}', r'\1', text)
-    text = re.sub(r'#{1,6}\s*', '', text)
-    text = re.sub(r'_{1,2}(.*?)_{1,2}', r'\1', text)
+    text = re.sub(r'\*|#|_', '', text)
     return text.strip()
 
 def build_pdf(patient_name: str, conversation: list) -> bytes:
-    now = datetime.now()
-
-    ai_messages = [m.get("content","") for m in conversation if m.get("role") in ("assistant","model")]
-    report_body = "\n\n".join(ai_messages)
-
-    summary_prompt = (
-        f"Based on this blood report consultation, generate a professional medical report with these sections:\n"
-        f"1. Overall Summary\n2. Parameter Analysis (each value, status, plain English meaning)\n"
-        f"3. Key Concerns (if any)\n4. Nutrition and Lifestyle Recommendations\n5. Doctor Note\n\n"
-        f"Patient name: {patient_name}\n"
-        f"Consultation content:\n{report_body[:4000]}\n\n"
-        f"Write as a professional medical document. No markdown. Plain text with clear section headings only."
-    )
-    structured = clean_for_pdf(call_groq(summary_prompt, [], max_tokens=2000))
-
-    DARK_BLUE  = (0,  51, 102)
-    MID_BLUE   = (0,  82, 142)
-    LIGHT_BLUE = (230, 242, 255)
-    WHITE      = (255, 255, 255)
-    DARK_GRAY  = (50,  50,  50)
-    MID_GRAY   = (100, 100, 100)
-    LINE_GRAY  = (210, 210, 210)
-
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=32)
     pdf.add_page()
-
-    # Header
-    pdf.set_fill_color(*DARK_BLUE)
-    pdf.rect(0, 0, 210, 40, 'F')
-    pdf.set_xy(10, 8)
-    pdf.set_text_color(*WHITE)
-    pdf.set_font("Arial", "B", 24)
-    pdf.cell(130, 12, "Vitalsy Elite AI", ln=False)
-    pdf.set_font("Arial", "I", 9)
-    pdf.set_xy(10, 22)
-    pdf.cell(130, 6, "Intelligent Blood Report Analysis Platform", ln=False)
-    pdf.set_xy(140, 9)
-    pdf.set_font("Arial", "B", 11)
-    pdf.cell(60, 7, "MEDICAL REPORT", align="R", ln=True)
-    pdf.set_xy(140, 17)
-    pdf.set_font("Arial", size=8)
-    pdf.cell(60, 5, f"Date: {now.strftime('%d %B %Y')}", align="R", ln=True)
-    pdf.set_xy(140, 23)
-    pdf.cell(60, 5, f"Time: {now.strftime('%I:%M %p')}", align="R", ln=True)
-
-    # Patient bar
-    pdf.set_fill_color(*LIGHT_BLUE)
-    pdf.rect(0, 40, 210, 16, 'F')
-    pdf.set_text_color(*DARK_BLUE)
-    pdf.set_font("Arial", "B", 10)
-    pdf.set_xy(10, 44)
-    pdf.cell(100, 6, f"Patient:  {patient_name}", ln=False)
-    pdf.set_font("Arial", size=8)
-    pdf.set_text_color(*MID_GRAY)
-    pdf.set_x(110)
-    pdf.cell(90, 6, "Powered by Vitalsy Elite AI  |  vitalsy.ai", align="R", ln=True)
-    pdf.ln(6)
-
-    pdf.set_draw_color(*MID_BLUE)
-    pdf.set_line_width(0.6)
-    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-    pdf.ln(5)
-
-    SECTION_KW = ["summary","analysis","parameter","concern","nutrition","lifestyle","recommendation","note","doctor"]
-    for line in structured.split("\n"):
-        line = line.strip()
-        if not line:
-            pdf.ln(2)
-            continue
-        ll         = line.lower()
-        is_section = any(kw in ll for kw in SECTION_KW) and len(line) < 80
-        is_status  = any(t in line for t in ("[HIGH]","[LOW]","[NORMAL]"))
-
-        if is_section:
-            pdf.ln(3)
-            pdf.set_fill_color(*MID_BLUE)
-            pdf.set_text_color(*WHITE)
-            pdf.set_font("Arial", "B", 10)
-            pdf.cell(0, 7, f"   {line.upper()}", ln=True, fill=True)
-            pdf.ln(1)
-            pdf.set_text_color(*DARK_GRAY)
-        elif is_status:
-            if "[HIGH]" in line:  pdf.set_fill_color(255, 230, 230)
-            elif "[LOW]" in line: pdf.set_fill_color(255, 250, 215)
-            else:                 pdf.set_fill_color(225, 255, 225)
-            pdf.set_font("Arial", "B", 9)
-            pdf.set_text_color(*DARK_GRAY)
-            pdf.multi_cell(0, 6, line, fill=True)
-        elif line.startswith("-") or line.startswith("*"):
-            pdf.set_font("Arial", size=9)
-            pdf.set_text_color(*DARK_GRAY)
-            pdf.set_x(14)
-            pdf.multi_cell(0, 5.5, "  " + line.lstrip("-* ").strip())
-        else:
-            pdf.set_font("Arial", size=9)
-            pdf.set_text_color(*DARK_GRAY)
-            pdf.multi_cell(0, 5.5, line)
-
-    # Transcript
-    pdf.ln(5)
-    pdf.set_fill_color(*MID_BLUE)
-    pdf.set_text_color(*WHITE)
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 7, "   CONSULTATION TRANSCRIPT", ln=True, fill=True)
-    pdf.ln(3)
-
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, f"Vitalsy Report - {patient_name}", ln=True, align="C")
+    pdf.ln(10)
     for msg in conversation:
-        role    = msg.get("role", "user")
+        role = "Assistant" if msg.get("role") in ("assistant", "model") else "User"
         content = clean_for_pdf(msg.get("content", ""))
-        if not content.strip():
-            continue
-        if role == "user":
-            pdf.set_font("Arial", "B", 8)
-            pdf.set_text_color(*MID_BLUE)
-            pdf.cell(0, 5, "You:", ln=True)
-        else:
-            pdf.set_font("Arial", "B", 8)
-            pdf.set_text_color(*DARK_BLUE)
-            pdf.cell(0, 5, "Vitalsy AI:", ln=True)
-        pdf.set_font("Arial", size=8)
-        pdf.set_text_color(*DARK_GRAY)
-        pdf.multi_cell(0, 4.8, content)
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 6, f"{role}:", ln=True)
+        pdf.set_font("Arial", size=10)
+        pdf.multi_cell(0, 5, content)
         pdf.ln(2)
-        pdf.set_draw_color(*LINE_GRAY)
-        pdf.set_line_width(0.2)
-        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(2)
-
-    # Footer
-    pdf.set_y(-30)
-    pdf.set_fill_color(*DARK_BLUE)
-    pdf.rect(0, pdf.get_y(), 210, 32, 'F')
-    pdf.set_text_color(*WHITE)
-    pdf.set_font("Arial", "B", 9)
-    pdf.cell(0, 6, "Vitalsy Elite AI  |  Blood Report Analysis  |  vitalsy.ai", ln=True, align="C")
-    pdf.set_font("Arial", "I", 7)
-    pdf.cell(0, 5, "Disclaimer: This report is AI-generated for informational purposes only.", ln=True, align="C")
-    pdf.cell(0, 4, "It does not constitute medical advice. Please consult a licensed healthcare professional.", ln=True, align="C")
-    pdf.set_font("Arial", size=7)
-    pdf.cell(0, 4, f"Generated: {now.strftime('%d %B %Y, %I:%M %p')}  |  Report ID: VEA-{now.strftime('%Y%m%d%H%M%S')}", ln=True, align="C")
-
-    result = pdf.output()
-    if isinstance(result, bytearray):
-        return bytes(result)
-    return result
+    return bytes(pdf.output())
 
 # ─────────────────────────────────────────────
-# ROUTES
+# FIXED FILE SERVING (No manual open/read)
 # ─────────────────────────────────────────────
-# ─────────────────────────────────────────────
-# HTML PAGE SERVING — serve frontend from Render
-# ─────────────────────────────────────────────
-def serve_html(filename: str) -> HTMLResponse:
-    """Read and serve an HTML file from the project root."""
-    paths_to_try = [
-        filename,
-        os.path.join(os.path.dirname(__file__), filename),
-        os.path.join("/opt/render/project/src", filename),
-    ]
-    for path in paths_to_try:
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                return HTMLResponse(content=f.read(), status_code=200)
-    return HTMLResponse(content=f"<h1>File not found: {filename}</h1>", status_code=404)
+def get_file_path(filename: str):
+    """Checks various locations to find the HTML file."""
+    # 1. Check current directory
+    if os.path.exists(filename):
+        return filename
+    # 2. Check script directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    script_path = os.path.join(script_dir, filename)
+    if os.path.exists(script_path):
+        return script_path
+    # 3. Check Render specific path
+    render_path = os.path.join("/opt/render/project/src", filename)
+    if os.path.exists(render_path):
+        return render_path
+    return None
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=FileResponse)
 async def root():
-    return serve_html("index.html")
+    path = get_file_path("index.html")
+    if not path: raise HTTPException(404, "index.html not found")
+    return FileResponse(path)
 
-@app.get("/index.html", response_class=HTMLResponse)
-async def index_page():
-    return serve_html("index.html")
-
-@app.get("/login", response_class=HTMLResponse)
-@app.get("/login.html", response_class=HTMLResponse)
+@app.get("/login")
 async def login_page():
-    return serve_html("login.html")
+    path = get_file_path("login.html")
+    if not path: raise HTTPException(404, "login.html not found")
+    return FileResponse(path)
 
-@app.get("/signup", response_class=HTMLResponse)
-@app.get("/signup.html", response_class=HTMLResponse)
+@app.get("/signup")
 async def signup_page():
-    return serve_html("signup.html")
+    path = get_file_path("signup.html")
+    if not path: raise HTTPException(404, "signup.html not found")
+    return FileResponse(path)
 
-@app.get("/main", response_class=HTMLResponse)
-@app.get("/main.html", response_class=HTMLResponse)
+@app.get("/main")
 async def main_page():
-    return serve_html("main.html")
+    path = get_file_path("main.html")
+    if not path: raise HTTPException(404, "main.html not found")
+    return FileResponse(path)
 
+# Serve .html files directly if requested
+@app.get("/{filename}.html")
+async def serve_html_files(filename: str):
+    path = get_file_path(f"{filename}.html")
+    if not path: raise HTTPException(404, f"{filename}.html not found")
+    return FileResponse(path)
+
+# ─────────────────────────────────────────────
+# API ROUTES
+# ─────────────────────────────────────────────
 @app.get("/api/status")
-def api_status():
-    return {"status": "Vitalsy Elite AI is running", "version": "4.0"}
-
-@app.get("/health")
-def health():
-    return {"ok": True}
-
-@app.options("/{rest_of_path:path}")
-async def preflight(rest_of_path: str):
-    """Handle CORS preflight for all routes."""
-    return JSONResponse(content={}, status_code=200)
+def api_status(): return {"status": "Vitalsy Elite AI is running"}
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
     reply = call_groq(request.message, request.history)
     save_chat(request.user_id, request.message, reply)
-    return {
-        "reply": reply,
-        "new_history_entry": [
-            {"role": "user",      "content": request.message},
-            {"role": "assistant", "content": reply},
-        ]
-    }
+    return {"reply": reply}
 
 @app.post("/analyze")
 async def analyze(
-    file:    UploadFile = File(...),
-    user_id: str        = Form("guest"),
-    history: str        = Form("[]"),
+    file: UploadFile = File(...),
+    user_id: str = Form("guest"),
+    history: str = Form("[]"),
 ):
-    filename = file.filename or "upload"
-    ext      = os.path.splitext(filename)[1].lower()
-    try:
-        prior_history = json.loads(history)
-    except Exception:
-        prior_history = []
-
-    if ext in BLOCKED_EXTS:
-        return {"analysis": "I am sorry, I cannot process audio or video files. Please upload your blood report as a PDF, Word document, Excel sheet, or image.", "filename": filename}
-    if ext and ext not in SUPPORTED_EXTS:
-        return {"analysis": f"I am not able to read .{ext.lstrip('.')} files right now. Please upload as PDF, DOCX, XLSX, CSV, TXT, or an image.", "filename": filename}
-
-    try:
-        file_bytes = await file.read()
-        text       = extract_text(file_bytes, filename)
-
-        if text == "[IMAGE_FILE]":
-            analysis = analyse_image_with_groq(file_bytes, filename)
-            save_chat(user_id, f"[Uploaded image: {filename}]", analysis)
-            return {
-                "analysis": analysis, "filename": filename,
-                "new_history_entry": [
-                    {"role": "user",      "content": f"[Uploaded blood report image: {filename}]"},
-                    {"role": "assistant", "content": analysis},
-                ]
-            }
-
-        if not text.strip():
-            reply = call_groq("The user uploaded a file but no text could be extracted. Apologise kindly and ask them to try a PDF or DOCX or type the values in chat.", prior_history)
-            return {"analysis": reply, "filename": filename}
-
-        prompt = (
-            f"The user uploaded a blood test report named '{filename}':\n\n{text[:5000]}\n\n"
-            f"Analyse fully as a blood report specialist. Include all four sections: "
-            f"parameter analysis, overall summary, what to do next, food & nutrition recommendations, lifestyle tips. "
-            f"If NOT a blood report, tell the user kindly."
-        )
-        analysis = call_groq(prompt, prior_history)
-        save_chat(user_id, f"[Uploaded: {filename}]", analysis)
-        return {
-            "analysis": analysis, "filename": filename,
-            "new_history_entry": [
-                {"role": "user",      "content": f"[Uploaded blood report: {filename}]\n\n{text[:3000]}"},
-                {"role": "assistant", "content": analysis},
-            ]
-        }
-    except Exception as e:
-        traceback.print_exc()
-        return {"analysis": f"Something went wrong reading your file. Please try again. ({e})"}
-
-class AnalyzeTextRequest(BaseModel):
-    text:    str
-    user_id: str  = "guest"
-    history: list = []
-
-@app.post("/analyze-text")
-async def analyze_text(request: AnalyzeTextRequest):
-    if not request.text.strip():
-        raise HTTPException(400, "No text provided")
-    prompt = (
-        f"The user pasted blood report values:\n\n{request.text[:5000]}\n\n"
-        f"Analyse fully as a blood report specialist. Include all four sections: "
-        f"parameter analysis, overall summary, what to do next, food & nutrition recommendations, lifestyle tips."
-    )
-    analysis = call_groq(prompt, request.history)
-    save_chat(request.user_id, f"[Pasted report]\n\n{request.text[:2000]}", analysis)
-    return {
-        "analysis": analysis,
-        "new_history_entry": [
-            {"role": "user",      "content": f"[Pasted blood report values]\n\n{request.text[:3000]}"},
-            {"role": "assistant", "content": analysis},
-        ]
-    }
-
-@app.get("/history/{user_id}")
-async def get_history(user_id: str):
-    if not db or user_id == "guest":
-        return {"messages": []}
-    try:
-        ref  = db.collection("chats").document(user_id).collection("messages")
-        docs = ref.order_by("timestamp").stream()
-        return {"messages": [{"role": d.get("role"), "content": d.get("content")} for d in docs]}
-    except Exception as e:
-        return {"messages": [], "error": str(e)}
-
-@app.delete("/history/{user_id}")
-async def clear_history(user_id: str):
-    if not db or user_id == "guest":
-        return {"cleared": False}
-    try:
-        ref = db.collection("chats").document(user_id).collection("messages")
-        for d in ref.stream(): d.reference.delete()
-        return {"cleared": True}
-    except Exception as e:
-        return {"cleared": False, "error": str(e)}
+    file_bytes = await file.read()
+    text = extract_text(file_bytes, file.filename)
+    if text == "[IMAGE_FILE]":
+        analysis = analyse_image_with_groq(file_bytes, file.filename)
+    else:
+        analysis = call_groq(f"Analyze this blood report: {text[:5000]}", json.loads(history))
+    save_chat(user_id, f"[File: {file.filename}]", analysis)
+    return {"analysis": analysis}
 
 @app.post("/download-pdf")
 async def download_pdf(request: PDFRequest):
-    try:
-        pdf_bytes = build_pdf(request.patient_name, request.conversation)
-        buf = io.BytesIO(pdf_bytes)
-        buf.seek(0)
-        safe = re.sub(r'[^a-zA-Z0-9_\-]', '_', request.patient_name)
-        fn   = f"Vitalsy_Report_{safe}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-        return StreamingResponse(
-            buf,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{fn}"'}
-        )
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(500, f"PDF generation failed: {e}")
-
-@app.post("/download-pdf-form")
-async def download_pdf_form(name: str = Form("Patient"), conversation: str = Form("[]")):
-    try:    convo = json.loads(conversation)
-    except: convo = []
-    try:
-        pdf_bytes = build_pdf(name, convo)
-        buf = io.BytesIO(pdf_bytes)
-        buf.seek(0)
-        safe = re.sub(r'[^a-zA-Z0-9_\-]', '_', name)
-        fn   = f"Vitalsy_Report_{safe}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-        return StreamingResponse(
-            buf,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{fn}"'}
-        )
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(500, f"PDF generation failed: {e}")
+    pdf_bytes = build_pdf(request.patient_name, request.conversation)
+    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=report.pdf"})
 
 # ─────────────────────────────────────────────
 # RUN
@@ -709,4 +398,5 @@ async def download_pdf_form(name: str = Form("Patient"), conversation: str = For
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
+    # THE NAME HERE MUST MATCH THE FILENAME (brain.py)
     uvicorn.run("brain:app", host="0.0.0.0", port=port, reload=False)
